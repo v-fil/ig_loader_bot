@@ -64,5 +64,5 @@ class TwitterLoadStrategy(AbstractStrategy):
 
 
 def extract_id(text: str) -> str:
-    _id = re.search(r"https://x.com/\S*/status/(\S*)/", text).group(1)
+    _id = re.search(r"https://x.com/\S*/status/([a-zA-Z0-9]*)", text).group(1)
     return f"X:{_id}"
