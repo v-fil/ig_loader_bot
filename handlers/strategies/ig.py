@@ -55,7 +55,10 @@ class SnapinstaPlaywrightStrategy(AbstractStrategy):
                     return
 
             except (AttributeError, Error) as e:
-                await page.screenshot(path="/tmp/scr.png")
+                try:
+                    await page.screenshot(path="/tmp/scr.png")
+                except Error:
+                    pass
                 logger.error(str(e))
 
 
