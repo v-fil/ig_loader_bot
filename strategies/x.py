@@ -5,7 +5,7 @@ from os import getenv
 from aiohttp import ClientSession
 from playwright.async_api import Error, async_playwright
 
-from handlers.base import AbstractStrategy, StrategyType
+from strategies.base import AbstractStrategy, StrategyType
 
 logger = logging.getLogger()
 DEBUG = getenv("DEBUG", False)
@@ -61,3 +61,8 @@ class TwitterLoadStrategy(AbstractStrategy):
                 ).group(1)
             except (AttributeError, IndexError) as e:
                 logger.error(str(e))
+
+
+def extract_id(text: str) -> str:
+    _id = re.search(r"https://x.com/\S*/status/(\S*)/", text).group(1)
+    return f"X:{_id}"

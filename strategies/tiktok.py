@@ -5,7 +5,7 @@ from os import getenv
 
 from aiohttp import ClientSession
 
-from handlers.base import AbstractStrategy, StrategyType
+from strategies.base import AbstractStrategy, StrategyType
 
 DEBUG = getenv("DEBUG", False)
 
@@ -42,3 +42,8 @@ class SnaptikSessionStrategy(AbstractStrategy):
             except IndexError as e:
                 logger.error(e)
                 return
+
+
+def extract_id(text: str) -> str:
+    _id = re.search(r"https://vm.tiktok.com/(\S*)/", text).group(1)
+    return f"TIKTOK:{_id}"

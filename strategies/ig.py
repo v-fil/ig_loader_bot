@@ -6,7 +6,7 @@ from os import getenv
 from playwright.async_api import Error, async_playwright
 from playwright.async_api import TimeoutError as PWTimeoutError
 
-from handlers.base import AbstractStrategy, StrategyType
+from strategies.base import AbstractStrategy, StrategyType
 
 DEBUG = getenv("DEBUG", False)
 
@@ -68,3 +68,8 @@ class DDInstaStrategy(AbstractStrategy):
     async def run(self, url: str) -> str | None:
         dd_url = re.sub("https://([w.]*)?", "https://d.dd", url)
         return dd_url
+
+
+def extract_id(text: str) -> str:
+    _id = re.search(r"https://[w.]*instagram.com/reel[s]?/(\S*)/", text).group(1)
+    return f"IG:{_id}"

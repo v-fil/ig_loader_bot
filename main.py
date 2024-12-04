@@ -8,7 +8,7 @@ from aiogram import Bot, Dispatcher, types
 from pytube import YouTube
 
 from filters import IGLinkFilter, TikTokFilter, XFilter, YTShortsFilter
-from handlers import ig_reel_handler, tiktok, x_handler
+from strategies import registry, Provider
 
 TOKEN = getenv("BOT_TOKEN")
 DEBUG = getenv("DEBUG", False)
@@ -18,8 +18,8 @@ dp = Dispatcher()
 
 
 @dp.message(IGLinkFilter())
-async def _ig_reel_handler(message: types.Message) -> None:
-    await ig_reel_handler(message)
+async def ig_reel_handler(message: types.Message) -> None:
+    await registry.run(provider=Provider.instagram, message=message)
 
 
 @dp.message(YTShortsFilter())
@@ -48,12 +48,12 @@ async def yt_shorts_handler(message: types.Message) -> None:
 
 @dp.message(TikTokFilter())
 async def tiktok_handler(message: types.Message) -> None:
-    await tiktok(message)
+    await registry.run(provider=Provider.tiktok, message=message)
 
 
 @dp.message(XFilter())
-async def _x_handler(message: types.Message) -> None:
-    await x_handler(message)
+async def twitter_handler(message: types.Message) -> None:
+    await registry.run(provider=Provider.twitter, message=message)
 
 
 async def main() -> None:
