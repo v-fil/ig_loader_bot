@@ -16,7 +16,7 @@ class IGLinkFilter(Filter):
 class YTShortsFilter(Filter):
     async def __call__(self, message: Message) -> bool:
         if message.text:
-            return bool(re.fullmatch(r"https://youtube.com/shorts/\S*", message.text))
+            return bool(re.fullmatch(r"https://[w.]*youtube.com/shorts/\S*", message.text))
         return False
 
 

@@ -1,5 +1,5 @@
 from .base import Registry, RegistryItem, Provider
-from . import tiktok, ig, x
+from . import tiktok, ig, x, yt
 
 __all__ = [
     'registry', 'Provider'
@@ -19,6 +19,10 @@ registry = Registry(
         Provider.tiktok: RegistryItem(
             strategies=[tiktok.SnaptikSessionStrategy()],
             extract_id=tiktok.extract_id
+        ),
+        Provider.youtube: RegistryItem(
+            strategies=[yt.PytubeYtStrategy()],
+            extract_id=yt.extract_id,
         )
     }
 )
