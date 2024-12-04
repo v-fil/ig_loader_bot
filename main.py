@@ -1,73 +1,68 @@
 import asyncio
 import logging
+import re
 import sys
 from os import getenv
-import re
 
 from aiogram import Bot, Dispatcher, types
-from aiogram.enums import ParseMode
-from aiogram.filters import CommandStart, Filter
-from aiogram.types import Message, URLInputFile
-from aiogram.utils.markdown import hbold
-import instaloader
+from pytube import YouTube
 
-# Bot token can be obtained via https://t.me/BotFather
+from filters import IGLinkFilter, TikTokFilter, XFilter, YTShortsFilter
+from handlers import ig_reel_handler, tiktok, x_handler
+
 TOKEN = getenv("BOT_TOKEN")
+DEBUG = getenv("DEBUG", False)
 
-# All handlers should be attached to the Router (or Dispatcher)
+
 dp = Dispatcher()
-
-loader = instaloader.InstaloaderContext()
-
-
-@dp.message(CommandStart())
-async def command_start_handler(message: Message) -> None:
-    """
-    This handler receives messages with `/start` command
-    """
-    # Most event objects have aliases for API methods that can be called in events' context
-    # For example if you want to answer to incoming message you can use `message.answer(...)` alias
-    # and the target chat will be passed to :ref:`aiogram.methods.send_message.SendMessage`
-    # method automatically or call API method directly via
-    # Bot instance: `bot.send_message(chat_id=message.chat.id, ...)`
-    await message.answer(f"Hello, {hbold(message.from_user.full_name)}!")
-
-
-class IGLinkFilter(Filter):
-    async def __call__(self, message: Message) -> bool:
-        if message.text:
-            return bool(re.fullmatch(r"https://[w.]*instagram.com/reel/\S*", message.text))
-        return True
 
 
 @dp.message(IGLinkFilter())
-async def echo_handler(message: types.Message) -> None:
-    """
-    Handler will forward receive a message back to the sender
+async def _ig_reel_handler(message: types.Message) -> None:
+    await ig_reel_handler(message)
 
-    By default, message handler will handle all message types (like a text, photo, sticker etc.)
-    """
+
+@dp.message(YTShortsFilter())
+async def yt_shorts_handler(message: types.Message) -> None:
+    if not message.text:
+        return
     try:
-        short_code = re.findall(r"https://[w.]*instagram.com/reel/(\S{10,11})/\S*", message.text)
-        if not short_code:
-            await message.answer("Shortcode cannot br found")
-        post = instaloader.Post.from_shortcode(instaloader.InstaloaderContext(), short_code[0])
-
-        file = URLInputFile(post.video_url)
-
-        await message.answer_video(file, reply_to_message_id=message.message_id)
+        short_url = re.findall(r"(https://[w.]*youtube.com/shorts/\S*)", message.text)
+        if not short_url:
+            return
+        yt = YouTube(short_url[0])
+        _url = (
+            yt.streams.filter(progressive=True, file_extension="mp4")
+            .order_by("resolution")
+            .desc()
+            .first()
+            .url
+        )
+        if _url:
+            await message.answer_video(
+                _url, reply_to_message_id=message.message_id, supports_streaming=True
+            )
     except TypeError:
-        # But not all the types is supported to be copied so need to handle it
-        await message.answer("Nice try!")
+        pass
+
+
+@dp.message(TikTokFilter())
+async def tiktok_handler(message: types.Message) -> None:
+    await tiktok(message)
+
+
+@dp.message(XFilter())
+async def _x_handler(message: types.Message) -> None:
+    await x_handler(message)
 
 
 async def main() -> None:
-    # Initialize Bot instance with a default parse mode which will be passed to all API calls
-    bot = Bot(TOKEN, parse_mode=ParseMode.HTML)
-    # And the run events dispatching
+    bot = Bot(TOKEN)
     await dp.start_polling(bot)
 
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, stream=sys.stdout)
+    logger = logging.getLogger()
+    logger.info(f'Launching with DEBUG mode: {"on" if DEBUG else "off"}')
     asyncio.run(main())
