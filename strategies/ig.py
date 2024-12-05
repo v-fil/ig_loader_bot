@@ -13,7 +13,7 @@ DEBUG = getenv("DEBUG", False)
 logger = logging.getLogger()
 
 
-class SnapinstaPlaywrightStrategy(AbstractStrategy):
+class SnapclipPlaywrightStrategy(AbstractStrategy):
     strategy_type = StrategyType.video_url
 
     async def run(self, url: str) -> str | None:
@@ -32,12 +32,14 @@ class SnapinstaPlaywrightStrategy(AbstractStrategy):
                 try:
                     await page.wait_for_selector("#closeModalBtn")
                     await (await page.query_selector("#closeModalBtn")).click()
-                except PWTimeoutError:
-                    await page.screenshot(path="/tmp/close_modal_not_found.png")
+                except (PWTimeoutError, Error):
+                    try:
+                        await page.screenshot(path="/tmp/close_modal_not_found.png")
+                    except Error:
+                        pass
                     logger.info(
                         f'{self.__class__.__name__} failed to find "closeModalBtn"'
                     )
-                    return
 
                 try:
                     await page.wait_for_selector(
