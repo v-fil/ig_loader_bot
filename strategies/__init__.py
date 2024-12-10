@@ -9,7 +9,7 @@ __all__ = [
 registry = Registry(
     items={
         Provider.instagram: RegistryItem(
-            strategies=[ig.SnapclipPlaywrightStrategy(), ig.DDInstaStrategy()],
+            strategies=[ig.SnapclipSessionStrategy(), ig.SnapclipPlaywrightStrategy(), ig.DDInstaStrategy()],
             extract_id=ig.extract_id,
         ),
         Provider.twitter: RegistryItem(

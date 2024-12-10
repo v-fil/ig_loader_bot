@@ -3,6 +3,7 @@ import re
 from asyncio import sleep
 from os import getenv
 
+from aiohttp import ClientSession
 from playwright.async_api import Error, async_playwright
 from playwright.async_api import TimeoutError as PWTimeoutError
 
@@ -11,6 +12,46 @@ from strategies.base import AbstractStrategy, StrategyType
 DEBUG = getenv("DEBUG", False)
 
 logger = logging.getLogger()
+
+
+class SnapclipSessionStrategy(AbstractStrategy):
+    strategy_type = StrategyType.video_url
+
+    async def run(self, url: str) -> str | None:
+        async with ClientSession() as session:
+            result = await session.post(
+                'https://snapclip.app/api/ajaxSearch',
+                data={
+                    'q': url,
+                    't': 'media',
+                    'v': 'v2',
+                    'lang': 'en',
+                    'cftoken': ''
+                }
+            )
+            data = await result.json()
+
+
+        async with async_playwright() as p:
+            browser = await p.chromium.launch(headless=not DEBUG)
+            page = await browser.new_page()
+            await page.goto("https://snapclip.app/en")
+
+            await page.evaluate(
+                "window.rd = function() {try{insertAndExecute;return true} catch (ReferenceError) {return false} }"
+            )
+            await page.wait_for_function("rd()")
+
+            await page.evaluate(
+                f"""
+                n={data};
+                insertAndExecute("js-result", "<script type='text/javascript'>" + n.data + "</script>");"""
+            )
+
+            result_button = await page.query_selector(
+                "#search-result > ul > li > div > div:nth-child(3) > a"
+            )
+            return await result_button.get_attribute("href")
 
 
 class SnapclipPlaywrightStrategy(AbstractStrategy):
@@ -24,11 +65,8 @@ class SnapclipPlaywrightStrategy(AbstractStrategy):
                 await page.goto("https://snapclip.app/en")
                 await page.get_by_role("textbox").fill(url)
 
-                await sleep(1)
-
-                await (
-                    await page.query_selector("#search-form > div > div > button")
-                ).click()
+                await sleep(0.5)
+                await page.get_by_role("button").click()
                 try:
                     await page.wait_for_selector("#closeModalBtn")
                     await (await page.query_selector("#closeModalBtn")).click()
