@@ -5,3 +5,6 @@ __pycache__/*
 *.pyc
 
 ig_loader.sh
+
+tmp/*
+!tmp/.gitkeep

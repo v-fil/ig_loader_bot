@@ -1,7 +1,7 @@
 import logging
 import re
 from asyncio import sleep
-from os import getenv
+from os import getenv, getcwd, remove
 
 from aiohttp import ClientSession
 from playwright.async_api import Error, async_playwright
@@ -30,28 +30,26 @@ class SnapclipSessionStrategy(AbstractStrategy):
                 }
             )
             data = await result.json()
-
-
+            code = data['data'].replace('return decodeURIComponent', 'document.res = decodeURIComponent')
+            with open('./tmp/snap.html', 'w') as f:
+                f.write(f'''<!DOCTYPE html><html lang="en"><body><script>{code}</script></body></html>''')
         async with async_playwright() as p:
             browser = await p.chromium.launch(headless=not DEBUG)
             page = await browser.new_page()
-            await page.goto("https://snapclip.app/en")
+            await page.goto(getcwd() + '/tmp/snap.html')
+            result = (await page.evaluate('() => document.res')).replace('\\', '')
 
-            await page.evaluate(
-                "window.rd = function() {try{insertAndExecute;return true} catch (ReferenceError) {return false} }"
-            )
-            await page.wait_for_function("rd()")
+            remove(getcwd() + '/tmp/snap.html')
 
-            await page.evaluate(
-                f"""
-                n={data};
-                insertAndExecute("js-result", "<script type='text/javascript'>" + n.data + "</script>");"""
-            )
-
-            result_button = await page.query_selector(
-                "#search-result > ul > li > div > div:nth-child(3) > a"
-            )
-            return await result_button.get_attribute("href")
+            try:
+                video_url = re.search(
+                    r'<a href=\"(\S*)\" class=\"abutton is-success is-fullwidth btn-premium mt-3\" rel=\"nofollow\" title=\"Download Video\">',
+                    result,
+                ).group(1)
+                return video_url
+            except IndexError as e:
+                logger.error(e)
+                return
 
 
 class SnapclipPlaywrightStrategy(AbstractStrategy):
