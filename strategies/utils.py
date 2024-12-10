@@ -14,7 +14,7 @@ async def answer_with_url(url: str, message: Message) -> None:
 async def upload_video(url: str, message: Message) -> None:
     file = URLInputFile(url)
     try:
-        await message.answer_video(file, reply_to_message_id=message.message_id)
+        await message.answer_video(file, reply_to_message_id=message.message_id, supports_streaming=True)
         return
     except TelegramNetworkError as e:
         logging.error(f"Telegram Network Error: {e}")
@@ -29,7 +29,7 @@ async def upload_video(url: str, message: Message) -> None:
 
     tg_file = BufferedInputFile(content, "ig_file.mp4")
     try:
-        await message.answer_video(tg_file, reply_to_message_id=message.message_id)
+        await message.answer_video(tg_file, reply_to_message_id=message.message_id, supports_streaming=True)
         return
     except TelegramNetworkError as e:
         logging.error(f"Telegram Network Error: {e}")
