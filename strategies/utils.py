@@ -21,18 +21,22 @@ async def upload_video(url: str, message: Message) -> None:
         pass
 
     logging.info(f"Trying to download {url}")
+
+    content = None
     async with ClientSession() as session:
         result = await session.get(url)
-        if not result.ok:
-            return
-        content = await result.content.read()
+        if result.ok:
+            content = await result.content.read()
+        else:
+            logging.info(f"Download failed")
 
-    tg_file = BufferedInputFile(content, "ig_file.mp4")
-    try:
-        await message.answer_video(tg_file, reply_to_message_id=message.message_id, supports_streaming=True)
-        return
-    except TelegramNetworkError as e:
-        logging.error(f"Telegram Network Error: {e}")
-        pass
+    if content:
+        tg_file = BufferedInputFile(content, "ig_file.mp4")
+        try:
+            await message.answer_video(tg_file, reply_to_message_id=message.message_id, supports_streaming=True)
+            return
+        except TelegramNetworkError as e:
+            logging.error(f"Telegram Network Error: {e}")
+            pass
 
     await answer_with_url(url, message)
