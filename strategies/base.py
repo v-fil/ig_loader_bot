@@ -63,8 +63,10 @@ class Registry:
                         await upload_video(result, message)
                         logger.info(f"[{_id}] successfully uploaded result, exiting")
                         return
-                    except exceptions.TelegramNetworkError:
-                        pass
+                    except Exception as e:
+                        logger.error(f'[{_id}] {str(e)}')
+                        await answer_with_url(result, message)
+                        return
                 elif strategy.strategy_type == StrategyType.url:
                     logger.info(f"[{_id}] trying to upload result")
                     await answer_with_url(result, message)
