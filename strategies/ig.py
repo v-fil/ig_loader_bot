@@ -1,7 +1,7 @@
 import logging
 import re
 from asyncio import sleep
-from os import getenv, getcwd, remove
+from os import getenv, getcwd, path, remove
 
 from aiohttp import ClientSession
 from playwright.async_api import Error, async_playwright
@@ -18,6 +18,7 @@ class SnapclipSessionStrategy(AbstractStrategy):
     strategy_type = StrategyType.video_url
 
     async def run(self, url: str) -> str | None:
+        file_path = path.join(getcwd(), 'tmp', 'snap.html')
         async with ClientSession() as session:
             result = await session.post(
                 'https://snapclip.app/api/ajaxSearch',
@@ -31,15 +32,15 @@ class SnapclipSessionStrategy(AbstractStrategy):
             )
             data = await result.json()
             code = data['data'].replace('return decodeURIComponent', 'document.res = decodeURIComponent')
-            with open('./tmp/snap.html', 'w') as f:
+            with open(file_path, 'w') as f:
                 f.write(f'''<!DOCTYPE html><html lang="en"><body><script>{code}</script></body></html>''')
         async with async_playwright() as p:
             browser = await p.chromium.launch(headless=not DEBUG)
             page = await browser.new_page()
-            await page.goto(getcwd() + '/tmp/snap.html')
+            await page.goto(f'file://{file_path}')
             result = (await page.evaluate('() => document.res')).replace('\\', '')
 
-            remove(getcwd() + '/tmp/snap.html')
+            remove(file_path)
 
             try:
                 video_url = re.search(
