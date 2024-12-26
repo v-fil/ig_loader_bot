@@ -1,11 +1,9 @@
 import asyncio
 import logging
-import re
 import sys
 from os import getenv
 
 from aiogram import Bot, Dispatcher, types
-from pytube import YouTube
 
 from filters import IGLinkFilter, TikTokFilter, XFilter, YTShortsFilter
 from strategies import registry, Provider

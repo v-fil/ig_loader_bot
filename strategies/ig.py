@@ -110,5 +110,5 @@ class DDInstaStrategy(AbstractStrategy):
 
 
 def extract_id(text: str) -> str:
-    _id = re.search(r"https://[w.]*instagram.com/reel[s]?/(\S*)/", text).group(1)
+    _id = re.search(r"https://[w.]*instagram\.com/[reel|share]*/([^/]*)/*", text).group(1)
     return f"IG:{_id}"

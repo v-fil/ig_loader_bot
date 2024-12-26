@@ -1,9 +1,11 @@
 import logging
+import re
 from abc import ABC, abstractmethod
 from enum import EnumType
 
-from aiogram import exceptions, types
+from aiogram import types
 
+from filters import FilterUrlRegex
 from strategies.utils import answer_with_url, upload_video
 
 logger = logging.getLogger()
@@ -50,11 +52,22 @@ class Registry:
     async def run(self, provider: Provider, message: types.Message) -> None:
         registry_item = self.items[provider]
 
-        _id = registry_item.extract_id(message.text)
+        url_regex = getattr(FilterUrlRegex, str(provider))
+        result = re.findall(url_regex, message.text)
+        if result:
+            url = result[0]
+        else:
+            logger.info(f"[{provider}] got text '{message.text}', could not find url")
+            return
+        try:
+            _id = registry_item.extract_id(url)
+        except AttributeError:
+            logger.info(f"[{provider}] got url '{url}', could not extract id")
+            _id = url
 
         for strategy in registry_item.strategies:
             logger.info(f"[{_id}] Running with {strategy.__class__.__name__}")
-            result = await strategy.run(message.text)
+            result = await strategy.run(url)
             if result:
                 logger.info(f"[{_id}] got result")
                 if strategy.strategy_type == StrategyType.video_url:
