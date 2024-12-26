@@ -13,8 +13,6 @@ logger = logging.getLogger()
 
 
 class SnaptikSessionStrategy(AbstractStrategy):
-    strategy_type = StrategyType.video_url
-
     async def run(self, text: str) -> str | None:
         async with ClientSession() as session:
             session.headers.update(

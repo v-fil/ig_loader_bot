@@ -9,8 +9,6 @@ from strategies.base import AbstractStrategy, StrategyType
 
 
 class PytubeYtStrategy(AbstractStrategy):
-    strategy_type = StrategyType.video_url
-
     async def run(self, url: str) -> str | None:
         try:
             short_url = re.findall(r"(https://[w.]*youtube.com/shorts/\S*)", url)

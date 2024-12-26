@@ -15,8 +15,6 @@ logger = logging.getLogger()
 
 
 class SnapclipSessionStrategy(AbstractStrategy):
-    strategy_type = StrategyType.video_url
-
     async def run(self, url: str) -> str | None:
         file_path = path.join(getcwd(), 'tmp', 'snap.html')
         async with ClientSession() as session:
@@ -54,8 +52,6 @@ class SnapclipSessionStrategy(AbstractStrategy):
 
 
 class SnapclipPlaywrightStrategy(AbstractStrategy):
-    strategy_type = StrategyType.video_url
-
     async def run(self, url: str) -> str | None:
         async with async_playwright() as p:
             browser = await p.chromium.launch(headless=not DEBUG)

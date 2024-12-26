@@ -12,8 +12,6 @@ DEBUG = getenv("DEBUG", False)
 
 
 class SSSPlaywrightStrategy(AbstractStrategy):
-    strategy_type = StrategyType.video_url
-
     async def run(self, url: str) -> str | None:
         load_button_selector = (
             "#mainpicture > div > a.pure-button.pure-button-primary.is-center.u-bl.dl-button."
@@ -43,8 +41,6 @@ class SSSPlaywrightStrategy(AbstractStrategy):
 
 
 class TwitterLoadStrategy(AbstractStrategy):
-    strategy_type = StrategyType.video_url
-
     async def run(self, url: str) -> str | None:
         try:
             url = re.findall(r"(https://x.com/\S*)\s?", url)[0]

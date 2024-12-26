@@ -24,7 +24,7 @@ class Provider(EnumType):
 
 
 class AbstractStrategy(ABC):
-    strategy_type: StrategyType
+    strategy_type: StrategyType = StrategyType.video_url
 
     @abstractmethod
     async def run(self, url: str) -> str | None:
