@@ -7,10 +7,11 @@ from os.path import join
 
 from aiogram import Bot, Dispatcher
 from aiogram.types import Message
+from aiogram.filters.command import Command
 import newrelic.agent
 import sentry_sdk
 
-from filters import PingFilter, UrlFilter, url_regex
+from filters import UrlFilter, url_regex
 from strategies import Provider, get_provider_by_url, registry
 
 TOKEN = getenv("BOT_TOKEN")
@@ -42,9 +43,9 @@ async def handler(message: Message) -> None:
         await asyncio.gather(*coroutines)
 
 
-@dp.message(PingFilter())
+@dp.message(Command('ping'))
 async def ping(message: Message) -> None:
-    await message.answer("pong")
+    await message.answer('pong')
 
 
 async def main() -> None:
