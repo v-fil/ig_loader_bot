@@ -1,7 +1,8 @@
 import asyncio
 import logging
 import sys
-from os import getenv
+from os import getenv, getcwd
+from os.path import join
 import re
 
 from aiogram import Bot, Dispatcher, types
@@ -52,6 +53,6 @@ if __name__ == "__main__":
     logger = logging.getLogger()
     logger.info(f'Launching with DEBUG mode: {"on" if DEBUG else "off"}')
 
-    newrelic.agent.initialize('newrelic.ini', environment='staging' if DEBUG else 'production')
+    newrelic.agent.initialize(join(getcwd(), 'newrelic.ini'), environment='staging' if DEBUG else 'production')
 
     asyncio.run(main())
