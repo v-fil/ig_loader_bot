@@ -5,6 +5,7 @@ from os import getenv
 import re
 
 from aiogram import Bot, Dispatcher, types
+import newrelic.agent
 
 from strategies import registry, Provider, get_provider_by_url
 
@@ -16,6 +17,7 @@ dp = Dispatcher()
 
 
 @dp.message()
+@newrelic.agent.background_task()
 async def handler(message: types.Message) -> None:
     regex = (r"(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)"
              r"(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|"
@@ -49,4 +51,7 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, stream=sys.stdout)
     logger = logging.getLogger()
     logger.info(f'Launching with DEBUG mode: {"on" if DEBUG else "off"}')
+
+    newrelic.agent.initialize('newrelic.ini', environment='staging' if DEBUG else 'production')
+
     asyncio.run(main())
