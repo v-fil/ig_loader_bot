@@ -2,11 +2,11 @@ import asyncio
 import logging
 import sys
 from os import getenv
+import re
 
 from aiogram import Bot, Dispatcher, types
 
-from filters import IGLinkFilter, TikTokFilter, XFilter, YTShortsFilter
-from strategies import registry, Provider
+from strategies import registry, Provider, get_provider_by_url
 
 TOKEN = getenv("BOT_TOKEN")
 DEBUG = getenv("DEBUG", False)
@@ -15,24 +15,29 @@ DEBUG = getenv("DEBUG", False)
 dp = Dispatcher()
 
 
-@dp.message(IGLinkFilter())
-async def ig_reel_handler(message: types.Message) -> None:
-    await registry.run(provider=Provider.instagram, message=message)
+@dp.message()
+async def handler(message: types.Message) -> None:
+    regex = (r"(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)"
+             r"(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|"
+             r"[^\s`!()\[\]{};:'\".,<>?«»“”‘’]))")
+    urls = re.findall(regex, message.text)
+    if not re.findall(regex, message.text):
+        return
 
-
-@dp.message(YTShortsFilter())
-async def yt_shorts_handler(message: types.Message) -> None:
-    await registry.run(provider=Provider.youtube, message=message)
-
-
-@dp.message(TikTokFilter())
-async def tiktok_handler(message: types.Message) -> None:
-    await registry.run(provider=Provider.tiktok, message=message)
-
-
-@dp.message(XFilter())
-async def twitter_handler(message: types.Message) -> None:
-    await registry.run(provider=Provider.twitter, message=message)
+    coroutines = []
+    for _url in urls:
+        url = _url[0]
+        provider_name = get_provider_by_url(url)
+        if provider_name:
+            coroutines.append(
+                registry.run(
+                    provider=getattr(Provider, provider_name),
+                    message=message,
+                    url=url,
+                )
+            )
+    if coroutines:
+        await asyncio.gather(*coroutines)
 
 
 async def main() -> None:

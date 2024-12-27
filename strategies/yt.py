@@ -5,7 +5,7 @@ from urllib.error import HTTPError
 
 from pytubefix import YouTube
 
-from strategies.base import AbstractStrategy, StrategyType
+from strategies.base import AbstractStrategy
 
 
 class PytubeYtStrategy(AbstractStrategy):

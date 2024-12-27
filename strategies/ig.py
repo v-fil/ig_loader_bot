@@ -1,3 +1,4 @@
+import ctypes
 import logging
 import re
 from asyncio import sleep
@@ -15,8 +16,16 @@ logger = logging.getLogger()
 
 
 class SnapclipSessionStrategy(AbstractStrategy):
+    @staticmethod
+    def _hash(url):
+        def hash_fn(word):
+            return ctypes.c_uint64(hash(word)).value
+
+        return str(hash_fn(url).to_bytes(8, "big").hex())
+
     async def run(self, url: str) -> str | None:
-        file_path = path.join(getcwd(), 'tmp', 'snap.html')
+        hashed_url = self._hash(url)
+        file_path = path.join(getcwd(), 'tmp', f'{hashed_url}.html')
         async with ClientSession() as session:
             result = await session.post(
                 'https://snapclip.app/api/ajaxSearch',
@@ -29,6 +38,9 @@ class SnapclipSessionStrategy(AbstractStrategy):
                 }
             )
             data = await result.json()
+            if 'data' not in data:
+                logger.error(f'url loaded with incomplete result: {data}')
+                return None
             code = data['data'].replace('return decodeURIComponent', 'document.res = decodeURIComponent')
             with open(file_path, 'w') as f:
                 f.write(f'''<!DOCTYPE html><html lang="en"><body><script>{code}</script></body></html>''')

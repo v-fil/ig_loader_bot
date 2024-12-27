@@ -28,7 +28,7 @@ async def upload_video(url: str, message: Message) -> None:
         if result.ok:
             content = await result.content.read()
         else:
-            logging.info(f"Download failed")
+            logging.info("Download failed")
 
     if content:
         tg_file = BufferedInputFile(content, "ig_file.mp4")

@@ -1,26 +1,38 @@
 import logging
 import re
 from abc import ABC, abstractmethod
-from enum import EnumType
+from enum import Enum
 
 from aiogram import types
 
-from filters import FilterUrlRegex
 from strategies.utils import answer_with_url, upload_video
 
 logger = logging.getLogger()
 
 
-class StrategyType(EnumType):
+class StrategyType(Enum):
     url = "url"
     video_url = "video_url"
 
 
-class Provider(EnumType):
+class Provider(Enum):
     instagram = "instagram"
     tiktok = "tiktok"
     twitter = "twitter"
     youtube = "youtube"
+
+
+class FilterUrlRegex(Enum):
+    instagram = r"https://[w.]*instagram\.com/[reel|share]*/\S*"
+    tiktok = r"https://vm.tiktok.com/\S*/"
+    twitter = r"https://x.com/\S*"
+    youtube = r"https://[w.]*youtube.com/shorts/\S*"
+
+
+def get_provider_by_url(url: str) -> str:
+    for provider, member in FilterUrlRegex.__members__.items():
+        if re.match(member.value, url):
+            return provider
 
 
 class AbstractStrategy(ABC):
@@ -49,16 +61,9 @@ class Registry:
     def __init__(self, items: dict[Provider, RegistryItem]):
         self.items = items
 
-    async def run(self, provider: Provider, message: types.Message) -> None:
+    async def run(self, provider: Provider, message: types.Message, url: str) -> None:
         registry_item = self.items[provider]
 
-        url_regex = getattr(FilterUrlRegex, str(provider))
-        result = re.findall(url_regex, message.text)
-        if result:
-            url = result[0]
-        else:
-            logger.info(f"[{provider}] got text '{message.text}', could not find url")
-            return
         try:
             _id = registry_item.extract_id(url)
         except AttributeError:

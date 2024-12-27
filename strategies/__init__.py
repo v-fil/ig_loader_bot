@@ -1,8 +1,8 @@
-from .base import Registry, RegistryItem, Provider
+from .base import Registry, RegistryItem, Provider, get_provider_by_url
 from . import tiktok, ig, x, yt
 
 __all__ = [
-    'registry', 'Provider'
+    'registry', 'Provider', 'get_provider_by_url'
 ]
 
 

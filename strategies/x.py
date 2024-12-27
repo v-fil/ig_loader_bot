@@ -5,7 +5,7 @@ from os import getenv
 from aiohttp import ClientSession
 from playwright.async_api import Error, async_playwright
 
-from strategies.base import AbstractStrategy, StrategyType
+from strategies.base import AbstractStrategy
 
 logger = logging.getLogger()
 DEBUG = getenv("DEBUG", False)

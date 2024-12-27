@@ -5,7 +5,7 @@ from os import getenv
 
 from aiohttp import ClientSession
 
-from strategies.base import AbstractStrategy, StrategyType
+from strategies.base import AbstractStrategy
 
 DEBUG = getenv("DEBUG", False)
 
