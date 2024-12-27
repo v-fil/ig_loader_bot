@@ -1,14 +1,16 @@
 import asyncio
 import logging
-import sys
-from os import getenv, getcwd
-from os.path import join
 import re
+import sys
+from os import getcwd, getenv
+from os.path import join
 
-from aiogram import Bot, Dispatcher, types
 import newrelic.agent
+from aiogram import Bot, Dispatcher
+from aiogram.types import Message
 
-from strategies import registry, Provider, get_provider_by_url
+from filters import PingFilter, UrlFilter, url_regex
+from strategies import Provider, get_provider_by_url, registry
 
 TOKEN = getenv("BOT_TOKEN")
 DEBUG = getenv("DEBUG", False)
@@ -17,15 +19,10 @@ DEBUG = getenv("DEBUG", False)
 dp = Dispatcher()
 
 
-@dp.message()
+@dp.message(UrlFilter())
 @newrelic.agent.background_task()
-async def handler(message: types.Message) -> None:
-    regex = (r"(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)"
-             r"(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|"
-             r"[^\s`!()\[\]{};:'\".,<>?«»“”‘’]))")
-    urls = re.findall(regex, message.text)
-    if not re.findall(regex, message.text):
-        return
+async def handler(message: Message) -> None:
+    urls = re.findall(url_regex, message.text)
 
     coroutines = []
     for _url in urls:
@@ -41,6 +38,11 @@ async def handler(message: types.Message) -> None:
             )
     if coroutines:
         await asyncio.gather(*coroutines)
+
+
+@dp.message(PingFilter())
+async def ping(message: Message) -> None:
+    await message.answer("pong")
 
 
 async def main() -> None:

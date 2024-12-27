@@ -1,6 +1,5 @@
-import re
 import logging
-
+import re
 from urllib.error import HTTPError
 
 from pytubefix import YouTube

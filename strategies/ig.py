@@ -2,11 +2,12 @@ import ctypes
 import logging
 import re
 from asyncio import sleep
-from os import getenv, getcwd, path, remove
+from os import getcwd, getenv, path, remove
 
 from aiohttp import ClientSession
-from playwright.async_api import Error, async_playwright
+from playwright.async_api import Error
 from playwright.async_api import TimeoutError as PWTimeoutError
+from playwright.async_api import async_playwright
 
 from strategies.base import AbstractStrategy, StrategyType
 
