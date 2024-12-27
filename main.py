@@ -45,7 +45,7 @@ async def handler(message: Message) -> None:
 
 @dp.message(Command('ping'))
 async def ping(message: Message) -> None:
-    await message.answer('pong')
+    await message.answer('pong', reply_to_message_id=message.message_id)
 
 
 async def main() -> None:
