@@ -28,6 +28,28 @@ class SnapclipSessionStrategy(AbstractStrategy):
         hashed_url = self._hash(url)
         file_path = path.join(getcwd(), 'tmp', f'{hashed_url}.html')
         async with ClientSession() as session:
+            # try to get correct headers
+            get_resp = await session.get(
+                'https://snapclip.app/en',
+                headers={
+                    'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,'
+                              'image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+                    'accept-language': 'uk',
+                    'priority': 'u=0, i',
+                    'sec-ch-ua': '"Google Chrome";v="131", "Chromium";v="131", "Not_A Brand";v="24"',
+                    'sec-ch-ua-mobile': '?0',
+                    'sec-ch-ua-platform': '"Windows"',
+                    'sec-fetch-dest': 'document',
+                    'sec-fetch-mode': 'navigate',
+                    'sec-fetch-site': 'none',
+                    'sec-fetch-user': '?1',
+                    'upgrade-insecure-requests': '1',
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
+                                  '(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
+                }
+            )
+            if get_resp.status != 200:
+                return None
             result = await session.post(
                 'https://snapclip.app/api/ajaxSearch',
                 data={
@@ -36,11 +58,10 @@ class SnapclipSessionStrategy(AbstractStrategy):
                     'v': 'v2',
                     'lang': 'en',
                     'cftoken': ''
-                },
-                headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
-                                       '(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'}
+                }
             )
             if result.status != 200:
+                print(await result.text())
                 return None
 
             data = await result.json()
