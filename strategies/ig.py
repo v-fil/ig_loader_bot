@@ -5,6 +5,7 @@ from asyncio import sleep
 from os import getcwd, getenv, path, remove
 
 from aiohttp import ClientSession
+import instaloader
 from playwright.async_api import Error
 from playwright.async_api import TimeoutError as PWTimeoutError
 from playwright.async_api import async_playwright
@@ -14,6 +15,18 @@ from strategies.base import AbstractStrategy, StrategyType
 DEBUG = getenv("DEBUG", False)
 
 logger = logging.getLogger()
+
+
+class InstaloaderStrategy(AbstractStrategy):
+    async def run(self, url: str) -> str | None:
+        loader = instaloader.Instaloader()
+        try:
+            post = instaloader.Post.from_shortcode(loader.context, extract_id(url).lstrip("IG:"))
+            video_url = post.video_url
+            if video_url:
+                return video_url
+        except instaloader.InstaloaderException as e:
+            logger.error(f"InstaloaderException: {e}")
 
 
 class SnapclipSessionStrategy(AbstractStrategy):
