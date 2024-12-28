@@ -36,8 +36,13 @@ class SnapclipSessionStrategy(AbstractStrategy):
                     'v': 'v2',
                     'lang': 'en',
                     'cftoken': ''
-                }
+                },
+                headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
+                                       '(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'}
             )
+            if result.status != 200:
+                return None
+
             data = await result.json()
             if 'data' not in data:
                 logger.error(f'url loaded with incomplete result: {data}')
