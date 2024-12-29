@@ -36,7 +36,6 @@ class SSSPlaywrightStrategy(AbstractStrategy):
                     return None
 
             except (AttributeError, Error) as e:
-                await page.screenshot(path="/tmp/x.err.scr.png")
                 logger.error(str(e))
 
 
