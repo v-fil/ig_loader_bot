@@ -1,5 +1,6 @@
 import ctypes
 import logging
+import os.path
 import re
 from asyncio import sleep
 from os import getcwd, getenv, path, remove
@@ -23,6 +24,10 @@ class InstaloaderStrategy(AbstractStrategy):
 
     async def run(self, url: str) -> str | Answer | None:
         loader = instaloader.Instaloader()
+        try:
+            loader.load_session_from_file(username='stub', filename=os.path.join(os.getcwd(), 'tmp', 'ig.session'))
+        except FileNotFoundError:
+            pass
         try:
             post = instaloader.Post.from_shortcode(loader.context, extract_id(url).lstrip("IG:"))
             if post.is_video:

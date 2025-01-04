@@ -4,7 +4,6 @@ from abc import ABC, abstractmethod
 from enum import Enum
 
 from aiogram import types
-from aiohttp import ClientSession
 
 from strategies.utils import answer_with_url, upload_video, Answer, answer_with_album
 
