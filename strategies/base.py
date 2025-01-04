@@ -4,8 +4,9 @@ from abc import ABC, abstractmethod
 from enum import Enum
 
 from aiogram import types
+from aiohttp import ClientSession
 
-from strategies.utils import answer_with_url, upload_video
+from strategies.utils import answer_with_url, upload_video, Answer, answer_with_album
 
 logger = logging.getLogger()
 
@@ -13,6 +14,7 @@ logger = logging.getLogger()
 class StrategyType(Enum):
     url = "url"
     video_url = "video_url"
+    items_list = "items_list"
 
 
 class Provider(Enum):
@@ -23,7 +25,7 @@ class Provider(Enum):
 
 
 class FilterUrlRegex(Enum):
-    instagram = r"https://[w.]*instagram\.com/[reel|share]*/\S*"
+    instagram = r"https://[w.]*instagram\.com/[reel|share|p]*/\S*"
     tiktok = r"https://vm.tiktok.com/\S*/"
     twitter = r"https://x.com/\S*"
     youtube = r"https://[w.]*youtube.com/shorts/\S*"
@@ -39,7 +41,7 @@ class AbstractStrategy(ABC):
     strategy_type: StrategyType = StrategyType.video_url
 
     @abstractmethod
-    async def run(self, url: str) -> str | None:
+    async def run(self, url: str) -> str | Answer | None:
         pass
 
 
@@ -85,9 +87,15 @@ class Registry:
                         logger.error(f'[{_id}] {str(e)}')
                         await answer_with_url(result, message)
                         return
+
                 elif strategy.strategy_type == StrategyType.url:
                     logger.info(f"[{_id}] trying to upload result")
                     await answer_with_url(result, message)
+                    return
+
+                elif strategy.strategy_type == StrategyType.items_list:
+                    logger.info(f"[{_id}] trying to upload album")
+                    await answer_with_album(result, message)
                     return
         else:
             logger.info(f"[{_id}] No strategies left, exiting")

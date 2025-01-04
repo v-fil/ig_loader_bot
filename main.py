@@ -58,20 +58,20 @@ if __name__ == "__main__":
     logger = logging.getLogger()
     logger.info(f'Launching with DEBUG mode: {"on" if DEBUG else "off"}')
 
-    newrelic.agent.initialize(join(getcwd(), 'newrelic.ini'), environment='staging' if DEBUG else 'production')
-    sentry_sdk.init(
-        dsn=SENTRY_DSN,
-        # Set traces_sample_rate to 1.0 to capture 100%
-        # of transactions for tracing.
-        traces_sample_rate=1.0,
-        _experiments={
-            # Set continuous_profiling_auto_start to True
-            # to automatically start the profiler when
-            # possible.
-            "continuous_profiling_auto_start": True,
-        },
-        debug=DEBUG,
-    )
+    if not DEBUG:
+        newrelic.agent.initialize(join(getcwd(), 'newrelic.ini'), environment='production')
+        sentry_sdk.init(
+            dsn=SENTRY_DSN,
+            # Set traces_sample_rate to 1.0 to capture 100%
+            # of transactions for tracing.
+            traces_sample_rate=1.0,
+            _experiments={
+                # Set continuous_profiling_auto_start to True
+                # to automatically start the profiler when
+                # possible.
+                "continuous_profiling_auto_start": True,
+            },
+        )
 
     logger.info(f'Initialization complete.')
 

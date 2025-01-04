@@ -1,9 +1,31 @@
 import logging
+from asyncio import gather
+from enum import Enum
 
 from aiogram.exceptions import TelegramNetworkError
-from aiogram.types import BufferedInputFile, Message, URLInputFile
+from aiogram.types import BufferedInputFile, Message, URLInputFile, InputMediaVideo, InputMediaPhoto
 from aiogram.utils.formatting import TextLink
 from aiohttp import ClientSession
+
+
+class FileType(Enum):
+    img = 'img'
+    video = 'video'
+
+
+class Link:
+    def __init__(self, url: str | None = None, file_type: FileType | None = None, filename: str | None = None):
+        self.url: str = url
+        self.filename: str = filename
+        self.type: FileType = file_type
+
+
+class Answer:
+    links: list[Link]
+
+    def __init__(self, links: list[Link] | None = None):
+        self.links = links or []
+
 
 
 async def answer_with_url(url: str, message: Message) -> None:
@@ -40,3 +62,27 @@ async def upload_video(url: str, message: Message) -> None:
             pass
 
     await answer_with_url(url, message)
+
+
+async def download_file(url, file_type, filename, session):
+    result = await session.get(url)
+    if result.ok:
+        content = await result.content.read()
+    else:
+        logging.info("Download failed")
+        return
+    if file_type == FileType.video:
+        return InputMediaVideo(media=BufferedInputFile(content, filename))
+    if file_type == FileType.img:
+        return InputMediaPhoto(media=BufferedInputFile(content, filename))
+
+
+async def answer_with_album(answer: Answer, message: Message) -> None:
+    coroutines = []
+
+    async with ClientSession() as session:
+        for item in answer.links:
+            coroutines.append(download_file(item.url, item.type, item.filename, session))
+        resp = await gather(*coroutines)
+
+    await message.reply_media_group(resp, reply_to_message_id=message.message_id)

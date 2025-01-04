@@ -10,7 +10,8 @@ from playwright.async_api import Error
 from playwright.async_api import TimeoutError as PWTimeoutError
 from playwright.async_api import async_playwright
 
-from strategies.base import AbstractStrategy, StrategyType
+from strategies.base import AbstractStrategy, StrategyType, Answer
+from strategies.utils import Link, FileType
 
 DEBUG = getenv("DEBUG", False)
 
@@ -18,13 +19,30 @@ logger = logging.getLogger()
 
 
 class InstaloaderStrategy(AbstractStrategy):
-    async def run(self, url: str) -> str | None:
+    strategy_type = StrategyType.items_list
+
+    async def run(self, url: str) -> str | Answer | None:
         loader = instaloader.Instaloader()
         try:
             post = instaloader.Post.from_shortcode(loader.context, extract_id(url).lstrip("IG:"))
-            video_url = post.video_url
-            if video_url:
-                return video_url
+            if post.is_video:
+                video_url = post.video_url
+                if video_url:
+                    return Answer(links=[Link(video_url)])
+            elif post.typename == 'GraphSidecar':
+                result = Answer()
+                for edge in post._field('edge_sidecar_to_children', 'edges'):
+                    link = Link()
+                    if edge['node']['is_video']:
+                        link.url = edge['node']['video_url']
+                        link.type = FileType.video
+                        link.filename = edge['node']['shortcode'] + ".mp4"
+                    else:
+                        link.url = edge['node']['display_url']
+                        link.type = FileType.img
+                        link.filename = edge['node']['shortcode'] + ".jpg"
+                    result.links.append(link)
+                return result
         except instaloader.InstaloaderException as e:
             logger.error(f"InstaloaderException: {e}")
 
@@ -158,5 +176,5 @@ class DDInstaStrategy(AbstractStrategy):
 
 
 def extract_id(text: str) -> str:
-    _id = re.search(r"https://[w.]*instagram\.com/[reel|share]*/([^/]*)/*", text).group(1)
+    _id = re.search(r"https://[w.]*instagram\.com/[reel|share|p]*/([^/]*)/*", text).group(1)
     return f"IG:{_id}"
