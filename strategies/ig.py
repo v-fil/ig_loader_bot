@@ -33,18 +33,18 @@ class InstaloaderStrategy(AbstractStrategy):
             if post.is_video:
                 video_url = post.video_url
                 if video_url:
-                    return Answer(links=[Link(video_url)])
+                    return Answer(links=[Link(video_url, file_type=FileType.video, filename=post.shortcode + '.mp4')])
             elif post.typename == 'GraphSidecar':
                 result = Answer()
                 for edge in post._field('edge_sidecar_to_children', 'edges'):
                     link = Link()
                     if edge['node']['is_video']:
                         link.url = edge['node']['video_url']
-                        link.type = FileType.video
+                        link.file_type = FileType.video
                         link.filename = edge['node']['shortcode'] + ".mp4"
                     else:
                         link.url = edge['node']['display_url']
-                        link.type = FileType.img
+                        link.file_type = FileType.img
                         link.filename = edge['node']['shortcode'] + ".jpg"
                     result.links.append(link)
                 return result
