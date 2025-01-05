@@ -40,11 +40,11 @@ class InstaloaderStrategy(AbstractStrategy):
                     link = Link()
                     if edge['node']['is_video']:
                         link.url = edge['node']['video_url']
-                        link.file_type = FileType.video
+                        link.filetype = FileType.video
                         link.filename = edge['node']['shortcode'] + ".mp4"
                     else:
                         link.url = edge['node']['display_url']
-                        link.file_type = FileType.img
+                        link.filetype = FileType.img
                         link.filename = edge['node']['shortcode'] + ".jpg"
                     result.links.append(link)
                 return result

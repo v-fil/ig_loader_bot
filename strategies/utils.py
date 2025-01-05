@@ -3,7 +3,7 @@ from asyncio import gather
 from enum import Enum
 
 from aiogram.exceptions import TelegramNetworkError
-from aiogram.types import BufferedInputFile, Message, URLInputFile, InputMediaVideo, InputMediaPhoto
+from aiogram.types import BufferedInputFile, Message, URLInputFile, InputMediaVideo, InputMediaPhoto, InputMedia
 from aiogram.utils.formatting import TextLink
 from aiohttp import ClientSession
 
@@ -21,7 +21,10 @@ class Link:
     def __init__(self, url: str | None = None, file_type: FileType | None = None, filename: str | None = None):
         self.url: str = url
         self.filename: str = filename
-        self.type: FileType = file_type
+        self.filetype: FileType = file_type
+
+    def __repr__(self):
+        return f'<Link {self.filetype}: {self.filename}>'
 
 
 class Answer:
@@ -74,7 +77,7 @@ async def download_file(url, file_type, filename, session):
         content = await result.content.read()
     else:
         logging.info("Download failed")
-        raise UploadError
+        return
     if file_type == FileType.video:
         return InputMediaVideo(media=BufferedInputFile(content, filename))
     if file_type == FileType.img:
@@ -86,7 +89,9 @@ async def answer_with_album(answer: Answer, message: Message) -> None:
 
     async with ClientSession() as session:
         for item in answer.links:
-            coroutines.append(download_file(item.url, item.type, item.filename, session))
+            coroutines.append(download_file(item.url, item.filetype, item.filename, session))
         resp = await gather(*coroutines)
 
+        if not any((isinstance(i, InputMedia) for i in resp)):
+            raise UploadError
     await message.reply_media_group(resp, reply_to_message_id=message.message_id)
