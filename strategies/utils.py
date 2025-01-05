@@ -13,6 +13,10 @@ class FileType(Enum):
     video = 'video'
 
 
+class UploadError(Exception):
+    """"""
+
+
 class Link:
     def __init__(self, url: str | None = None, file_type: FileType | None = None, filename: str | None = None):
         self.url: str = url
@@ -70,7 +74,7 @@ async def download_file(url, file_type, filename, session):
         content = await result.content.read()
     else:
         logging.info("Download failed")
-        return
+        raise UploadError
     if file_type == FileType.video:
         return InputMediaVideo(media=BufferedInputFile(content, filename))
     if file_type == FileType.img:

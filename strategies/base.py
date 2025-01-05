@@ -5,7 +5,7 @@ from enum import Enum
 
 from aiogram import types
 
-from strategies.utils import answer_with_url, upload_video, Answer, answer_with_album
+from strategies.utils import answer_with_url, upload_video, Answer, answer_with_album, UploadError
 
 logger = logging.getLogger()
 
@@ -94,7 +94,10 @@ class Registry:
 
                 elif strategy.strategy_type == StrategyType.items_list:
                     logger.info(f"[{_id}] trying to upload album")
-                    await answer_with_album(result, message)
+                    try:
+                        await answer_with_album(result, message)
+                    except UploadError:
+                        continue
                     return
         else:
             logger.info(f"[{_id}] No strategies left, exiting")
