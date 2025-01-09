@@ -5,7 +5,7 @@ from enum import Enum
 from aiogram.exceptions import TelegramNetworkError
 from aiogram.types import BufferedInputFile, Message, URLInputFile, InputMediaVideo, InputMediaPhoto, InputMedia
 from aiogram.utils.formatting import TextLink
-from aiohttp import ClientSession
+from aiohttp import ClientSession, ClientPayloadError
 
 
 class FileType(Enum):
@@ -74,7 +74,11 @@ async def upload_video(url: str, message: Message) -> None:
 async def download_file(url, file_type, filename, session):
     result = await session.get(url)
     if result.ok:
-        content = await result.content.read()
+        try:
+            content = await result.content.read()
+        except ClientPayloadError as e:
+            logging.error(f"Client PayloadError: {e}")
+            return
     else:
         logging.info("Download failed")
         return
