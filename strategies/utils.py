@@ -5,7 +5,7 @@ from enum import Enum
 from aiogram.exceptions import TelegramNetworkError
 from aiogram.types import BufferedInputFile, Message, URLInputFile, InputMediaVideo, InputMediaPhoto, InputMedia
 from aiogram.utils.formatting import TextLink
-from aiohttp import ClientSession, ClientPayloadError
+from aiohttp import ClientSession, ClientPayloadError, ClientResponse
 
 
 class FileType(Enum):
@@ -35,6 +35,20 @@ class Answer:
 
 
 
+async def get_content(result: ClientResponse) -> bytes | None:
+    if result.ok:
+        try:
+            content = await result.content.read()
+            return content
+        except TimeoutError as e:
+            logging.error(f"Time out reading content: {e}")
+        except ClientPayloadError as e:
+            logging.error(f"Client PayloadError: {e}")
+
+    else:
+        logging.info("Download failed")
+
+
 async def answer_with_url(url: str, message: Message) -> None:
     content = TextLink("url", url=url)
     await message.answer(**content.as_kwargs(), reply_to_message_id=message.message_id)
@@ -54,10 +68,7 @@ async def upload_video(url: str, message: Message) -> None:
     content = None
     async with ClientSession() as session:
         result = await session.get(url)
-        if result.ok:
-            content = await result.content.read()
-        else:
-            logging.info("Download failed")
+        content = await get_content(result)
 
     if content:
         tg_file = BufferedInputFile(content, "ig_file.mp4")
@@ -73,14 +84,8 @@ async def upload_video(url: str, message: Message) -> None:
 
 async def download_file(url, file_type, filename, session):
     result = await session.get(url)
-    if result.ok:
-        try:
-            content = await result.content.read()
-        except ClientPayloadError as e:
-            logging.error(f"Client PayloadError: {e}")
-            return
-    else:
-        logging.info("Download failed")
+    content = await get_content(result)
+    if not content:
         return
     if file_type == FileType.video:
         return InputMediaVideo(media=BufferedInputFile(content, filename))

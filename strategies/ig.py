@@ -1,6 +1,5 @@
 import ctypes
 import logging
-import os.path
 import re
 from asyncio import sleep
 from os import getcwd, getenv, path, remove
@@ -23,9 +22,9 @@ class InstaloaderStrategy(AbstractStrategy):
     strategy_type = StrategyType.items_list
 
     async def run(self, url: str) -> str | Answer | None:
-        loader = instaloader.Instaloader()
+        loader = instaloader.Instaloader(iphone_support=False)
         try:
-            loader.load_session_from_file(username='stub', filename=os.path.join(os.getcwd(), 'tmp', 'ig.session'))
+            loader.load_session_from_file(username='stub', filename=path.join(getcwd(), 'tmp', 'ig.session'))
         except FileNotFoundError:
             pass
         try:
