@@ -100,7 +100,7 @@ class SnapclipSessionStrategy(AbstractStrategy):
                 }
             )
             if result.status != 200:
-                print(await result.text())
+                logger.error(await result.text())
                 return None
 
             data = await result.json()
@@ -130,7 +130,7 @@ class SnapclipSessionStrategy(AbstractStrategy):
 
 
 class SnapclipPlaywrightStrategy(AbstractStrategy):
-    async def run(self, url: str) -> str | None:
+    async def run(self, url: str) -> Answer | None:
         async with async_playwright() as p:
             browser = await p.chromium.launch(headless=not DEBUG)
             page = await browser.new_page()
@@ -159,7 +159,8 @@ class SnapclipPlaywrightStrategy(AbstractStrategy):
                     result_button = await page.query_selector(
                         "#search-result > ul > li > div > div:nth-child(3) > a"
                     )
-                    return await result_button.get_attribute("href")
+                    _url = await result_button.get_attribute("href")
+                    return Answer([Link(_url)])
                 except PWTimeoutError:
                     await page.screenshot(path="/tmp/result_not_found.png")
                     logger.info(
@@ -176,7 +177,7 @@ class SnapclipPlaywrightStrategy(AbstractStrategy):
 
 
 class DDInstaStrategy(AbstractStrategy):
-    async def run(self, url: str) -> str | None:
+    async def run(self, url: str) -> Answer | None:
         dd_url = re.sub("https://([w.]*)?", "https://d.dd", url)
         return Answer([Link(dd_url)])
 
@@ -184,3 +185,11 @@ class DDInstaStrategy(AbstractStrategy):
 def extract_id(text: str) -> str:
     _id = re.search(r"https://[w.]*instagram\.com/[reel|share|p]*/([^/]*)/*", text).group(1)
     return f"IG:{_id}"
+
+
+async def preprocess_url(url: str) -> str:
+    if '/share/' in url:
+        async with ClientSession() as session:
+            result = await session.get(url, allow_redirects=False)
+            return result.headers['Location']
+    return url

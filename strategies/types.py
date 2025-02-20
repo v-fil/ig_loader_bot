@@ -16,7 +16,7 @@ class Provider(Enum):
 
 class FilterUrlRegex(Enum):
     instagram = r"https://[w.]*instagram\.com/[reel|share|p]*/\S*"
-    tiktok = r"https://vm.tiktok.com/\S*/"
+    tiktok = r"https://vm.tiktok.com/\S*|https://[w.]*tiktok.com/"
     twitter = r"https://x.com/\S*"
     youtube = r"https://[w.]*youtube.com/shorts/\S*"
 

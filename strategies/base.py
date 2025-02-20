@@ -1,6 +1,7 @@
 import logging
 import re
 from abc import ABC, abstractmethod
+from typing import Optional
 
 from aiogram import types
 
@@ -26,13 +27,17 @@ class AbstractStrategy(ABC):
 class RegistryItem:
     strategies: list[AbstractStrategy]
     extract_id: callable
+    preprocess_url: Optional[callable]
 
-    def __init__(self, strategies: list[AbstractStrategy], extract_id: callable):
+    def __init__(
+        self, strategies: list[AbstractStrategy], extract_id: callable, preprocess_url: Optional[callable] = None
+    ) -> None:
         assert strategies
         assert extract_id
 
         self.strategies = strategies
         self.extract_id = extract_id
+        self.preprocess_url = preprocess_url
 
 
 class Registry:
@@ -49,6 +54,11 @@ class Registry:
         except AttributeError:
             logger.info(f"[{provider}] got url '{url}', could not extract id")
             _id = url
+
+        if registry_item.preprocess_url:
+            logger.info(f"[{provider}][{_id}] preprocessing url '{url}'")
+            url = await registry_item.preprocess_url(url)
+            logger.info(f"[{provider}][{_id}] preprocessed url '{url}'")
 
         for strategy in registry_item.strategies:
             logger.info(f"[{_id}] Running with {strategy.__class__.__name__}")
