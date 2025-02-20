@@ -4,6 +4,7 @@ import re
 from asyncio import sleep
 from os import getcwd, getenv, path, remove
 
+import requests
 from aiohttp import ClientSession
 import instaloader
 from playwright.async_api import Error
@@ -179,7 +180,7 @@ class SnapclipPlaywrightStrategy(AbstractStrategy):
 class DDInstaStrategy(AbstractStrategy):
     async def run(self, url: str) -> Answer | None:
         dd_url = re.sub("https://([w.]*)?", "https://d.dd", url)
-        return Answer([Link(dd_url)])
+        return Answer([Link(dd_url)], result_type=ResultType.url)
 
 
 def extract_id(text: str) -> str:
@@ -189,7 +190,10 @@ def extract_id(text: str) -> str:
 
 async def preprocess_url(url: str) -> str:
     if '/share/' in url:
-        async with ClientSession() as session:
-            result = await session.get(url, allow_redirects=False)
-            return result.headers['Location']
+        async with async_playwright() as p:
+            browser = await p.chromium.launch(headless=not DEBUG)
+            page = await browser.new_page()
+            await page.goto(url)
+            return page.url
+
     return url
