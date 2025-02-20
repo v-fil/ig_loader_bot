@@ -64,12 +64,13 @@ async def upload_video(url: str, message: Message) -> None:
     logging.info(f"Trying to download {url}")
 
     # TODO: find out why instagram returns URL mismatch if load using asyncio
-    resp = requests.get(url)
-    content = resp.content
-    # content = None
-    # async with ClientSession() as session:
-    #     result = await session.get(url)
-    #     content = await get_content(result)
+    if 'instagram' in url:
+        resp = requests.get(url)
+        content = resp.content
+    else:
+        async with ClientSession() as session:
+            result = await session.get(url)
+            content = await get_content(result)
 
     if content:
         tg_file = BufferedInputFile(content, "ig_file.mp4")
