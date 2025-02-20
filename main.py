@@ -27,6 +27,9 @@ dp = Dispatcher()
 async def handler(message: Message) -> None:
     urls = re.findall(url_regex, message.text)
 
+    if message.reply_to_message:
+        message = message.reply_to_message
+
     coroutines = []
     for _url in urls:
         url = _url[0]

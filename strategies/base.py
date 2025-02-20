@@ -63,7 +63,7 @@ class Registry:
                         return
                     except Exception as e:
                         logger.error(f'[{_id}] {str(e)}')
-                        await answer_with_url(result, message)
+                        await answer_with_url(result.links[0].url, message)
                         return
 
                 elif result.result_type == ResultType.url:
