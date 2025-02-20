@@ -6,7 +6,7 @@ from aiohttp import ClientSession
 from playwright.async_api import Error, async_playwright
 
 from strategies.base import AbstractStrategy
-from strategies.utils import Answer
+from strategies.utils import Answer, Link
 
 logger = logging.getLogger()
 DEBUG = getenv("DEBUG", False)
@@ -32,7 +32,8 @@ class SSSPlaywrightStrategy(AbstractStrategy):
 
                 onclick = await result_button.get_attribute("onclick")
                 try:
-                    return Answer(re.search(r"(http[a-zA-Z0-9/:.]*)", onclick).group(1))
+                    _url = re.search(r"(http[a-zA-Z0-9/:.]*)", onclick).group(1)
+                    return Answer([Link(_url)])
                 except IndexError:
                     return None
 
@@ -52,9 +53,10 @@ class TwitterLoadStrategy(AbstractStrategy):
                 await session.get(f"https://twitsave.com/info?url={url}")
             ).text()
             try:
-                return Answer(re.search(
+                _url = re.search(
                     r"<video class=[\S\s]{10,100} src=\"(.*?)\"", result
-                ).group(1))
+                ).group(1)
+                return Answer([Link(_url)])
             except (AttributeError, IndexError) as e:
                 logger.error(str(e))
 

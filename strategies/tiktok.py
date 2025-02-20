@@ -6,7 +6,7 @@ from os import getenv
 from aiohttp import ClientSession
 
 from strategies.base import AbstractStrategy
-from strategies.utils import Answer
+from strategies.utils import Answer, Link
 
 DEBUG = getenv("DEBUG", False)
 
@@ -37,7 +37,7 @@ class SnaptikSessionStrategy(AbstractStrategy):
                     '<div class="btn-container mb-1"><a href="(.*?)" target="_blank" rel="noreferrer">',
                     result["html"],
                 ).group(1)
-                return Answer(video_url)
+                return Answer([Link(video_url)])
             except IndexError as e:
                 logger.error(e)
                 return

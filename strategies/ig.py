@@ -178,7 +178,7 @@ class SnapclipPlaywrightStrategy(AbstractStrategy):
 class DDInstaStrategy(AbstractStrategy):
     async def run(self, url: str) -> str | None:
         dd_url = re.sub("https://([w.]*)?", "https://d.dd", url)
-        return dd_url
+        return Answer([Link(dd_url)])
 
 
 def extract_id(text: str) -> str:
