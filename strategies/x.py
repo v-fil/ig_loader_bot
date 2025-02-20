@@ -6,13 +6,14 @@ from aiohttp import ClientSession
 from playwright.async_api import Error, async_playwright
 
 from strategies.base import AbstractStrategy
+from strategies.utils import Answer
 
 logger = logging.getLogger()
 DEBUG = getenv("DEBUG", False)
 
 
 class SSSPlaywrightStrategy(AbstractStrategy):
-    async def run(self, url: str) -> str | None:
+    async def run(self, url: str) -> Answer | None:
         load_button_selector = (
             "#mainpicture > div > a.pure-button.pure-button-primary.is-center.u-bl.dl-button."
             "download_link.without_watermark.vignette_active.quality-best"
@@ -31,7 +32,7 @@ class SSSPlaywrightStrategy(AbstractStrategy):
 
                 onclick = await result_button.get_attribute("onclick")
                 try:
-                    return re.search(r"(http[a-zA-Z0-9/:.]*)", onclick).group(1)
+                    return Answer(re.search(r"(http[a-zA-Z0-9/:.]*)", onclick).group(1))
                 except IndexError:
                     return None
 
@@ -40,7 +41,7 @@ class SSSPlaywrightStrategy(AbstractStrategy):
 
 
 class TwitterLoadStrategy(AbstractStrategy):
-    async def run(self, url: str) -> str | None:
+    async def run(self, url: str) -> Answer | None:
         try:
             url = re.findall(r"(https://x.com/\S*)\s?", url)[0]
         except IndexError:
@@ -51,9 +52,9 @@ class TwitterLoadStrategy(AbstractStrategy):
                 await session.get(f"https://twitsave.com/info?url={url}")
             ).text()
             try:
-                return re.search(
+                return Answer(re.search(
                     r"<video class=[\S\s]{10,100} src=\"(.*?)\"", result
-                ).group(1)
+                ).group(1))
             except (AttributeError, IndexError) as e:
                 logger.error(str(e))
 

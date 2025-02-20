@@ -1,16 +1,13 @@
 import logging
 from asyncio import gather
-from enum import Enum
 
+import requests
 from aiogram.exceptions import TelegramNetworkError
 from aiogram.types import BufferedInputFile, Message, URLInputFile, InputMediaVideo, InputMediaPhoto, InputMedia
 from aiogram.utils.formatting import TextLink
 from aiohttp import ClientSession, ClientPayloadError, ClientResponse
 
-
-class FileType(Enum):
-    img = 'img'
-    video = 'video'
+from .types import FileType, ResultType
 
 
 class UploadError(Exception):
@@ -28,11 +25,12 @@ class Link:
 
 
 class Answer:
+    result_type: ResultType
     links: list[Link]
 
-    def __init__(self, links: list[Link] | None = None):
+    def __init__(self, links: list[Link] | None = None, result_type: ResultType = ResultType.video_url):
+        self.result_type = result_type
         self.links = links or []
-
 
 
 async def get_content(result: ClientResponse) -> bytes | None:
@@ -46,7 +44,8 @@ async def get_content(result: ClientResponse) -> bytes | None:
             logging.error(f"Client PayloadError: {e}")
 
     else:
-        logging.info("Download failed")
+        text = await result.content.read()
+        logging.info(f"Download failed status:{result.status} reason: {result.reason} text: {text}")
 
 
 async def answer_with_url(url: str, message: Message) -> None:
@@ -61,14 +60,16 @@ async def upload_video(url: str, message: Message) -> None:
         return
     except TelegramNetworkError as e:
         logging.error(f"Telegram Network Error: {e}")
-        pass
 
     logging.info(f"Trying to download {url}")
 
-    content = None
-    async with ClientSession() as session:
-        result = await session.get(url)
-        content = await get_content(result)
+    # TODO: find out why instagram returns URL mismatch if load using asyncio
+    resp = requests.get(url)
+    content = resp.content
+    # content = None
+    # async with ClientSession() as session:
+    #     result = await session.get(url)
+    #     content = await get_content(result)
 
     if content:
         tg_file = BufferedInputFile(content, "ig_file.mp4")

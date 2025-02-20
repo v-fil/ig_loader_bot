@@ -1,33 +1,14 @@
 import logging
 import re
 from abc import ABC, abstractmethod
-from enum import Enum
 
 from aiogram import types
 
 from strategies.utils import answer_with_url, upload_video, Answer, answer_with_album, UploadError
 
+from .types import FilterUrlRegex, ResultType, Provider
+
 logger = logging.getLogger()
-
-
-class StrategyType(Enum):
-    url = "url"
-    video_url = "video_url"
-    items_list = "items_list"
-
-
-class Provider(Enum):
-    instagram = "instagram"
-    tiktok = "tiktok"
-    twitter = "twitter"
-    youtube = "youtube"
-
-
-class FilterUrlRegex(Enum):
-    instagram = r"https://[w.]*instagram\.com/[reel|share|p]*/\S*"
-    tiktok = r"https://vm.tiktok.com/\S*/"
-    twitter = r"https://x.com/\S*"
-    youtube = r"https://[w.]*youtube.com/shorts/\S*"
 
 
 def get_provider_by_url(url: str) -> str:
@@ -37,10 +18,8 @@ def get_provider_by_url(url: str) -> str:
 
 
 class AbstractStrategy(ABC):
-    strategy_type: StrategyType = StrategyType.video_url
-
     @abstractmethod
-    async def run(self, url: str) -> str | Answer | None:
+    async def run(self, url: str) -> Answer | None:
         pass
 
 
@@ -76,10 +55,10 @@ class Registry:
             result = await strategy.run(url)
             if result:
                 logger.info(f"[{_id}] got result")
-                if strategy.strategy_type == StrategyType.video_url:
+                if result.result_type == ResultType.video_url:
                     try:
                         logger.info(f"[{_id}] trying to upload result")
-                        await upload_video(result, message)
+                        await upload_video(result.links[0].url, message)
                         logger.info(f"[{_id}] successfully uploaded result, exiting")
                         return
                     except Exception as e:
@@ -87,12 +66,12 @@ class Registry:
                         await answer_with_url(result, message)
                         return
 
-                elif strategy.strategy_type == StrategyType.url:
+                elif result.result_type == ResultType.url:
                     logger.info(f"[{_id}] trying to upload result")
-                    await answer_with_url(result, message)
+                    await answer_with_url(result.links[0].url, message)
                     return
 
-                elif strategy.strategy_type == StrategyType.items_list:
+                elif result.result_type == ResultType.items_list:
                     logger.info(f"[{_id}] trying to upload album")
                     try:
                         await answer_with_album(result, message)

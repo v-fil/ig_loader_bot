@@ -10,7 +10,7 @@ from playwright.async_api import Error
 from playwright.async_api import TimeoutError as PWTimeoutError
 from playwright.async_api import async_playwright
 
-from strategies.base import AbstractStrategy, StrategyType, Answer
+from strategies.base import AbstractStrategy, ResultType, Answer
 from strategies.utils import Link, FileType
 
 DEBUG = getenv("DEBUG", False)
@@ -19,9 +19,7 @@ logger = logging.getLogger()
 
 
 class InstaloaderStrategy(AbstractStrategy):
-    strategy_type = StrategyType.items_list
-
-    async def run(self, url: str) -> str | Answer | None:
+    async def run(self, url: str) -> Answer | None:
         loader = instaloader.Instaloader(iphone_support=False)
         try:
             loader.load_session_from_file(username='stub', filename=path.join(getcwd(), 'tmp', 'ig.session'))
@@ -32,9 +30,15 @@ class InstaloaderStrategy(AbstractStrategy):
             if post.is_video:
                 video_url = post.video_url
                 if video_url:
-                    return Answer(links=[Link(video_url, file_type=FileType.video, filename=post.shortcode + '.mp4')])
+                    video_url_parts = video_url.split("/v/")
+                    if len(video_url_parts) > 1:
+                        video_url = 'https://scontent.cdninstagram.com/v/' + video_url_parts[1]
+                    return Answer(
+                        links=[Link(video_url, file_type=FileType.video, filename=post.shortcode + '.mp4')],
+                        result_type=ResultType.video_url,
+                    )
             elif post.typename == 'GraphSidecar':
-                result = Answer()
+                result = Answer(result_type=ResultType.items_list)
                 for edge in post._field('edge_sidecar_to_children', 'edges'):
                     link = Link()
                     if edge['node']['is_video']:
@@ -172,8 +176,6 @@ class SnapclipPlaywrightStrategy(AbstractStrategy):
 
 
 class DDInstaStrategy(AbstractStrategy):
-    strategy_type = StrategyType.url
-
     async def run(self, url: str) -> str | None:
         dd_url = re.sub("https://([w.]*)?", "https://d.dd", url)
         return dd_url

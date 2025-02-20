@@ -5,15 +5,16 @@ from urllib.error import HTTPError
 from pytubefix import YouTube
 
 from strategies.base import AbstractStrategy
+from strategies.utils import Answer
 
 
 class PytubeYtStrategy(AbstractStrategy):
-    async def run(self, url: str) -> str | None:
+    async def run(self, url: str) -> Answer | None:
         try:
             short_url = re.findall(r"(https://[w.]*youtube.com/shorts/\S*)", url)
             if not short_url:
                 return
-            yt = YouTube(short_url[0], use_oauth=False, allow_oauth_cache=True)
+            yt = YouTube(short_url[0], use_oauth=True, allow_oauth_cache=True)
             _url = (
                 yt.streams.filter(progressive=True, file_extension="mp4")
                 .order_by("resolution")
@@ -22,7 +23,7 @@ class PytubeYtStrategy(AbstractStrategy):
                 .url
             )
             if _url:
-                return _url
+                return Answer(_url)
         except (HTTPError, TypeError) as e:
             logging.error(e)
             return None

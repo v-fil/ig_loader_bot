@@ -6,6 +6,7 @@ from os import getenv
 from aiohttp import ClientSession
 
 from strategies.base import AbstractStrategy
+from strategies.utils import Answer
 
 DEBUG = getenv("DEBUG", False)
 
@@ -13,7 +14,7 @@ logger = logging.getLogger()
 
 
 class SnaptikSessionStrategy(AbstractStrategy):
-    async def run(self, text: str) -> str | None:
+    async def run(self, text: str) -> Answer | None:
         async with ClientSession() as session:
             session.headers.update(
                 {
@@ -36,7 +37,7 @@ class SnaptikSessionStrategy(AbstractStrategy):
                     '<div class="btn-container mb-1"><a href="(.*?)" target="_blank" rel="noreferrer">',
                     result["html"],
                 ).group(1)
-                return video_url
+                return Answer(video_url)
             except IndexError as e:
                 logger.error(e)
                 return
