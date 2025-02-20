@@ -190,10 +190,7 @@ def extract_id(text: str) -> str:
 
 async def preprocess_url(url: str) -> str:
     if '/share/' in url:
-        async with async_playwright() as p:
-            browser = await p.chromium.launch(headless=not DEBUG)
-            page = await browser.new_page()
-            await page.goto(url)
-            return page.url
-
+        async with ClientSession() as session:
+            result = await session.get(url)
+            return str(result.url)
     return url
