@@ -10,6 +10,9 @@ from aiohttp import ClientSession, ClientPayloadError, ClientResponse
 from .types import FileType, ResultType
 
 
+logger = logging.getLogger()
+
+
 class UploadError(Exception):
     """"""
 
@@ -39,13 +42,13 @@ async def get_content(result: ClientResponse) -> bytes | None:
             content = await result.content.read()
             return content
         except TimeoutError as e:
-            logging.error(f"Time out reading content: {e}")
+            logger.error(f"Time out reading content: {e}")
         except ClientPayloadError as e:
-            logging.error(f"Client PayloadError: {e}")
+            logger.error(f"Client PayloadError: {e}")
 
     else:
         text = await result.content.read()
-        logging.info(f"Download failed status:{result.status} reason: {result.reason} text: {text}")
+        logger.info(f"Download failed status:{result.status} reason: {result.reason} text: {text}")
 
 
 async def answer_with_url(url: str, message: Message) -> None:
@@ -59,15 +62,16 @@ async def upload_video(url: str, message: Message) -> bool:
         await message.answer_video(file, reply_to_message_id=message.message_id, supports_streaming=True)
         return True
     except TelegramNetworkError as e:
-        logging.error(f"Telegram Network Error: {e}")
+        logger.error(f"Telegram Network Error: {e}")
 
-    logging.info(f"Trying to download {url}")
+    logger.info(f"Trying to download {url}")
 
     # TODO: find out why instagram returns URL mismatch if load using asyncio
     if 'instagram' in url:
         resp = requests.get(url)
         content = resp.content
         if resp.headers['Content-Type'] == 'text/plain':
+            logger.info('Got invalid content type')
             return False
     else:
         async with ClientSession() as session:
@@ -80,7 +84,7 @@ async def upload_video(url: str, message: Message) -> bool:
             await message.answer_video(tg_file, reply_to_message_id=message.message_id, supports_streaming=True)
             return True
         except TelegramNetworkError as e:
-            logging.error(f"Telegram Network Error: {e}")
+            logger.error(f"Telegram Network Error: {e}")
             pass
 
     return False
