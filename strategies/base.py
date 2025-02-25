@@ -60,6 +60,7 @@ class Registry:
             url = await registry_item.preprocess_url(url)
             logger.info(f"[{provider}][{_id}] preprocessed url '{url}'")
 
+        result = None
         for strategy in registry_item.strategies:
             logger.info(f"[{_id}] Running with {strategy.__class__.__name__}")
             result = await strategy.run(url)
@@ -68,9 +69,11 @@ class Registry:
                 if result.result_type == ResultType.video_url:
                     try:
                         logger.info(f"[{_id}] trying to upload result")
-                        await upload_video(result.links[0].url, message)
-                        logger.info(f"[{_id}] successfully uploaded result, exiting")
-                        return
+                        uploaded = await upload_video(result.links[0].url, message)
+                        if uploaded:
+                            logger.info(f"[{_id}] successfully uploaded result, exiting")
+                            return
+                        continue
                     except Exception as e:
                         logger.error(f'[{_id}] {str(e)}')
                         await answer_with_url(result.links[0].url, message)
@@ -89,4 +92,6 @@ class Registry:
                         continue
                     return
         else:
+            if result:
+                await answer_with_url(result.links[0].url, message)
             logger.info(f"[{_id}] No strategies left, exiting")

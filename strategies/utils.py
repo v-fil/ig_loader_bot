@@ -53,11 +53,11 @@ async def answer_with_url(url: str, message: Message) -> None:
     await message.answer(**content.as_kwargs(), reply_to_message_id=message.message_id)
 
 
-async def upload_video(url: str, message: Message) -> None:
+async def upload_video(url: str, message: Message) -> bool:
     file = URLInputFile(url)
     try:
         await message.answer_video(file, reply_to_message_id=message.message_id, supports_streaming=True)
-        return
+        return True
     except TelegramNetworkError as e:
         logging.error(f"Telegram Network Error: {e}")
 
@@ -67,6 +67,8 @@ async def upload_video(url: str, message: Message) -> None:
     if 'instagram' in url:
         resp = requests.get(url)
         content = resp.content
+        if resp.headers['Content-Type'] == 'text/plain':
+            return False
     else:
         async with ClientSession() as session:
             result = await session.get(url)
@@ -76,12 +78,12 @@ async def upload_video(url: str, message: Message) -> None:
         tg_file = BufferedInputFile(content, "ig_file.mp4")
         try:
             await message.answer_video(tg_file, reply_to_message_id=message.message_id, supports_streaming=True)
-            return
+            return True
         except TelegramNetworkError as e:
             logging.error(f"Telegram Network Error: {e}")
             pass
 
-    await answer_with_url(url, message)
+    return False
 
 
 async def download_file(url, file_type, filename, session):
