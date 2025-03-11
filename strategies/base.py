@@ -49,11 +49,6 @@ class Registry:
     async def run(self, provider: Provider, message: types.Message, url: str) -> None:
         registry_item = self.items[provider]
 
-        if provider == Provider.youtube:
-            # disable YouTube for now
-            await message.answer('Не чекайте на відповідь. Ютуб поки не робить', reply_to_message_id=message.message_id)
-            return
-
         try:
             _id = registry_item.extract_id(url)
         except AttributeError:

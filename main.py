@@ -42,8 +42,14 @@ async def handler(message: Message) -> None:
                     url=url,
                 )
             )
-    if coroutines:
-        await asyncio.gather(*coroutines)
+    if not coroutines:
+        return
+    try:
+        # 2 minutes should be enough even for IG on raspberry
+        async with asyncio.timeout(120):
+            await asyncio.gather(*coroutines)
+    except TimeoutError:
+        pass
 
 
 @dp.message(Command('ping'))
