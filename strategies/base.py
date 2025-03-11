@@ -50,8 +50,8 @@ class Registry:
         registry_item = self.items[provider]
 
         if provider == Provider.youtube:
-            # disable youtube for now
-            await message.answer('Не чекайте на відповідь. Ютуб поки не робить')
+            # disable YouTube for now
+            await message.answer('Не чекайте на відповідь. Ютуб поки не робить', reply_to_message_id=message.message_id)
             return
 
         try:
