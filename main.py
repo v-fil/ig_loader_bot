@@ -33,8 +33,11 @@ async def handler(message: Message) -> None:
     coroutines = []
     for _url in urls:
         url = _url[0]
-        provider_name = get_provider_by_url(url)
-        if provider_name:
+        if provider_name := get_provider_by_url(url):
+            # temporary disable youtube
+            if provider_name == Provider.youtube.value:
+                continue
+
             coroutines.append(
                 registry.run(
                     provider=getattr(Provider, provider_name),
