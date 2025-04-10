@@ -90,7 +90,9 @@ async def upload_video(url: str, message: Message) -> bool:
     return False
 
 
-async def download_file(url, file_type, filename, session):
+async def download_file(
+        url: str, file_type: str, filename: str, session: ClientSession
+) -> InputMediaVideo | InputMediaPhoto | None:
     result = await session.get(url)
     content = await get_content(result)
     if not content:

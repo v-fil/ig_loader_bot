@@ -65,7 +65,7 @@ class Registry:
             logger.info(f"[{_id}] Running with {strategy.__class__.__name__}")
             result = await strategy.run(url)
             if result:
-                logger.info(f"[{_id}] got result")
+                logger.info(f"[{_id}] got result url: {result.links}")
                 if result.result_type == ResultType.video_url:
                     try:
                         logger.info(f"[{_id}] trying to upload result")
