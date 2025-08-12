@@ -32,7 +32,7 @@ class RegistryItem:
     def __init__(
         self, strategies: list[AbstractStrategy], extract_id: callable, preprocess_url: Optional[callable] = None
     ) -> None:
-        assert strategies
+        assert strategies is not None
         assert extract_id
 
         self.strategies = strategies

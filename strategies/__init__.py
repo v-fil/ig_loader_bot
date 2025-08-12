@@ -28,7 +28,9 @@ registry = Registry(
             preprocess_url=tiktok.preprocess_url,
         ),
         Provider.youtube: RegistryItem(
-            strategies=[yt.PytubeYtStrategy()],
+            # disable YouTube for now
+            # strategies=[yt.PytubeYtStrategy()],
+            strategies=[],
             extract_id=yt.extract_id,
         ),
     }
