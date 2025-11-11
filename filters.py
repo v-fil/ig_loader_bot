@@ -1,5 +1,6 @@
 import re
 
+from aiogram.enums import ContentType
 from aiogram.filters import Filter
 from aiogram.types import Message
 
@@ -15,4 +16,14 @@ class UrlFilter(Filter):
 
 class VasyaFilter(Filter):
     async def __call__(self, message: Message) -> bool:
-        return bool(message.from_user.username == "alfred_hedgehog")
+        return bool(message.from_user.username == "dioxine")
+
+
+class VasyaBurntFilter(Filter):
+    async def __call__(self, message: Message) -> bool:
+        return message.text == 'Вася згорів'
+
+
+class JoinedFilter(Filter):
+    async def __call__(self, message: Message) -> bool:
+        return message.content_type == ContentType.NEW_CHAT_MEMBERS

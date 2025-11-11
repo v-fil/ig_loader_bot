@@ -3,16 +3,17 @@ import logging
 from random import randint
 import re
 import sys
-from os import getcwd, getenv
-from os.path import join
+from os import getcwd, getenv, remove
+from os.path import join, exists
 
 from aiogram import Bot, Dispatcher
+from aiogram.enums import ContentType
 from aiogram.types import Message
 from aiogram.filters.command import Command
 import newrelic.agent
 import sentry_sdk
 
-from filters import UrlFilter, url_regex, VasyaFilter
+from filters import UrlFilter, url_regex, VasyaFilter, VasyaBurntFilter, JoinedFilter
 from strategies import Provider, get_provider_by_url, registry
 
 TOKEN = getenv("BOT_TOKEN")
@@ -21,6 +22,21 @@ SENTRY_DSN = getenv("SENTRY_DSN")
 
 
 dp = Dispatcher()
+
+
+def is_vasya_burnt() -> bool:
+    return exists('.vasya_burnt')
+
+
+def set_vasya_burnt(is_burnt) -> None:
+    if is_burnt:
+        with open('.vasya_burnt', 'w') as f:
+            f.write(' ')
+    else:
+        try:
+            remove('.vasya_burnt')
+        except FileNotFoundError:
+            pass
 
 
 @dp.message(UrlFilter())
@@ -55,9 +71,20 @@ async def handler(message: Message) -> None:
 
 @dp.message(VasyaFilter())
 async def vasya_handler(message: Message) -> None:
+    await message.answer_animation(
+        'CgACAgIAAxkBAAIBu2kToK0i0ZgH4INiOWSh9j4_QyN7AAK1fQACuuuhSN0amQABRYjNkDYE',
+        reply_to_message_id=message.message_id
+    )
+
     if randint(0, 1):
         await asyncio.sleep(randint(1, 5) * 60 * 60)
-        await message.answer('.', reply_to_message_id=message.message_id)
+        if not is_vasya_burnt():
+            await message.answer('.', reply_to_message_id=message.message_id)
+
+
+@dp.message(VasyaBurntFilter())
+async def vasya_burnt_handler(message: Message) -> None:
+    set_vasya_burnt(not is_vasya_burnt())
 
 
 @dp.message(Command('ping'))
@@ -68,6 +95,14 @@ async def ping(message: Message) -> None:
 async def main() -> None:
     bot = Bot(TOKEN)
     await dp.start_polling(bot)
+
+
+@dp.message(JoinedFilter())
+async def joined(message: Message) -> None:
+    await message.answer_animation(
+        'CgACAgIAAxkBAAIBu2kToK0i0ZgH4INiOWSh9j4_QyN7AAK1fQACuuuhSN0amQABRYjNkDYE',
+        reply_to_message_id=message.message_id
+    )
 
 
 if __name__ == "__main__":
