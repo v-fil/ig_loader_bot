@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from random import randint
 import re
 import sys
 from os import getcwd, getenv
@@ -11,7 +12,7 @@ from aiogram.filters.command import Command
 import newrelic.agent
 import sentry_sdk
 
-from filters import UrlFilter, url_regex
+from filters import UrlFilter, url_regex, VasyaFilter
 from strategies import Provider, get_provider_by_url, registry
 
 TOKEN = getenv("BOT_TOKEN")
@@ -49,6 +50,14 @@ async def handler(message: Message) -> None:
             await asyncio.gather(*coroutines)
     except TimeoutError:
         pass
+
+
+
+@dp.message(VasyaFilter())
+async def vasya_handler(message: Message) -> None:
+    if randint(0, 1):
+        await asyncio.sleep(randint(1, 5) * 60 * 60)
+        await message.answer('.', reply_to_message_id=message.message_id)
 
 
 @dp.message(Command('ping'))
