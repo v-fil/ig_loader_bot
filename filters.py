@@ -16,7 +16,7 @@ class UrlFilter(Filter):
 
 class VasyaFilter(Filter):
     async def __call__(self, message: Message) -> bool:
-        return bool(message.from_user.username == "dioxine")
+        return bool(message.from_user.username == "alfred_hedgehog")
 
 
 class VasyaBurntFilter(Filter):

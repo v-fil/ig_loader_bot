@@ -8,7 +8,7 @@ from os.path import join, exists
 
 from aiogram import Bot, Dispatcher
 from aiogram.enums import ContentType
-from aiogram.types import Message
+from aiogram.types import Message, URLInputFile
 from aiogram.filters.command import Command
 import newrelic.agent
 import sentry_sdk
@@ -99,8 +99,8 @@ async def main() -> None:
 
 @dp.message(JoinedFilter())
 async def joined(message: Message) -> None:
-    await message.answer_animation(
-        'CgACAgIAAxkBAAIBu2kToK0i0ZgH4INiOWSh9j4_QyN7AAK1fQACuuuhSN0amQABRYjNkDYE',
+    await message.answer_video(
+        URLInputFile('https://media1.tenor.com/m/x8v1oNUOmg4AAAAC/rickroll-roll.gif'),
         reply_to_message_id=message.message_id
     )
 
