@@ -1,4 +1,5 @@
 import logging
+from pathlib import Path
 from asyncio import gather
 
 import requests
@@ -58,7 +59,6 @@ async def answer_with_url(url: str, message: Message) -> None:
 
 async def upload_video(url: str, message: Message) -> bool:
     if url.startswith('/tmp/') or url.startswith('/var/'):
-        from pathlib import Path
         file_path = Path(url)
         if file_path.exists():
             content = file_path.read_bytes()
