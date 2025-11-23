@@ -1,4 +1,4 @@
-from . import ig, tiktok, x, yt
+from . import ig, tiktok, x, yt, reddit
 from .base import Provider, Registry, RegistryItem, get_provider_by_url
 
 __all__ = [
@@ -32,6 +32,10 @@ registry = Registry(
             # strategies=[yt.PytubeYtStrategy()],
             strategies=[],
             extract_id=yt.extract_id,
+        ),
+        Provider.reddit: RegistryItem(
+            strategies=[reddit.RedditStrategy(), reddit.RedditDirectStrategy()],
+            extract_id=reddit.extract_id,
         ),
     }
 )
