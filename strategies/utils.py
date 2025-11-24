@@ -1,4 +1,5 @@
 import logging
+from pathlib import Path
 from asyncio import gather
 
 import requests
@@ -57,6 +58,19 @@ async def answer_with_url(url: str, message: Message) -> None:
 
 
 async def upload_video(url: str, message: Message) -> bool:
+    if url.startswith('/tmp/') or url.startswith('/var/'):
+        file_path = Path(url)
+        if file_path.exists():
+            content = file_path.read_bytes()
+            tg_file = BufferedInputFile(content, file_path.name)
+            try:
+                await message.answer_video(tg_file, reply_to_message_id=message.message_id, supports_streaming=True)
+                file_path.unlink()  # Clean up temp file
+                return True
+            except TelegramNetworkError as e:
+                logger.error(f"Telegram Network Error: {e}")
+                return False
+
     file = URLInputFile(url)
     try:
         await message.answer_video(file, reply_to_message_id=message.message_id, supports_streaming=True)

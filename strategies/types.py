@@ -12,6 +12,7 @@ class Provider(Enum):
     tiktok = "tiktok"
     twitter = "twitter"
     youtube = "youtube"
+    reddit = "reddit"
 
 
 class FilterUrlRegex(Enum):
@@ -19,6 +20,7 @@ class FilterUrlRegex(Enum):
     tiktok = r"https://vm.tiktok.com/\S*|https://[w.]*tiktok.com/"
     twitter = r"https://x.com/\S*"
     youtube = r"https://[w.]*youtube.com/shorts/\S*"
+    reddit = r"https://[w.]*reddit\.com/r/\S*/comments/\S*"
 
 
 class FileType(Enum):
