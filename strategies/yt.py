@@ -36,5 +36,7 @@ class PytubeYtStrategy(AbstractStrategy):
 
 
 def extract_id(text: str) -> str:
-    _id = re.search(r"youtube.com/shorts/(\S*)/?", text).group(1)
-    return f"YTShorts:{_id}"
+    match = re.search(r"youtube\.com/shorts/(\S*)/?", text)
+    if not match:
+        raise ValueError(f"Could not extract YouTube ID from: {text}")
+    return f"YTShorts:{match.group(1)}"

@@ -9,7 +9,7 @@ from strategies.base import AbstractStrategy
 from strategies.utils import Answer, Link
 
 logger = logging.getLogger()
-DEBUG = getenv("DEBUG", False)
+DEBUG = getenv("DEBUG", "").lower() in ("1", "true", "yes")
 
 
 class SSSPlaywrightStrategy(AbstractStrategy):
@@ -62,5 +62,7 @@ class TwitterLoadStrategy(AbstractStrategy):
 
 
 def extract_id(text: str) -> str:
-    _id = re.search(r"https://x.com/\S*/status/([a-zA-Z0-9]*)", text).group(1)
-    return f"X:{_id}"
+    match = re.search(r"https://x\.com/\S*/status/([a-zA-Z0-9]*)", text)
+    if not match:
+        raise ValueError(f"Could not extract X/Twitter ID from: {text}")
+    return f"X:{match.group(1)}"

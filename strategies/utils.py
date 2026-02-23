@@ -1,5 +1,5 @@
+import asyncio
 import logging
-from asyncio import gather
 
 import requests
 from aiogram.exceptions import TelegramNetworkError
@@ -68,7 +68,7 @@ async def upload_video(url: str, message: Message) -> bool:
 
     # TODO: find out why instagram returns URL mismatch if load using asyncio
     if 'instagram' in url:
-        resp = requests.get(url)
+        resp = await asyncio.to_thread(requests.get, url)
         content = resp.content
         if resp.headers['Content-Type'] == 'text/plain':
             logger.info('Got invalid content type')
@@ -85,7 +85,6 @@ async def upload_video(url: str, message: Message) -> bool:
             return True
         except TelegramNetworkError as e:
             logger.error(f"Telegram Network Error: {e}")
-            pass
 
     return False
 
@@ -109,7 +108,7 @@ async def answer_with_album(answer: Answer, message: Message) -> None:
     async with ClientSession() as session:
         for item in answer.links:
             coroutines.append(download_file(item.url, item.filetype, item.filename, session))
-        resp = await gather(*coroutines)
+        resp = await asyncio.gather(*coroutines)
 
         # Filter out None results from failed downloads
         media_items = [i for i in resp if isinstance(i, InputMedia)]

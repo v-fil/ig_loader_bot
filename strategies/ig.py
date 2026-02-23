@@ -1,7 +1,8 @@
+import asyncio
 import ctypes
 import logging
 import re
-from asyncio import sleep
+import tempfile
 from os import getcwd, getenv, path, remove
 
 import requests
@@ -14,13 +15,14 @@ from playwright.async_api import async_playwright
 from strategies.base import AbstractStrategy, ResultType, Answer
 from strategies.utils import Link, FileType
 
-DEBUG = getenv("DEBUG", False)
+DEBUG = getenv("DEBUG", "").lower() in ("1", "true", "yes")
 
 logger = logging.getLogger()
 
 
 class InstaloaderStrategy(AbstractStrategy):
-    async def run(self, url: str) -> Answer | None:
+    @staticmethod
+    def _load_post(url: str) -> Answer | None:
         loader = instaloader.Instaloader(iphone_support=False)
         try:
             loader.load_session_from_file(username='stub', filename=path.join(getcwd(), 'tmp', 'ig.session'))
@@ -55,6 +57,9 @@ class InstaloaderStrategy(AbstractStrategy):
         except instaloader.InstaloaderException as e:
             logger.error(f"InstaloaderException: {e}")
 
+    async def run(self, url: str) -> Answer | None:
+        return await asyncio.to_thread(self._load_post, url)
+
 
 class SnapclipSessionStrategy(AbstractStrategy):
     @staticmethod
@@ -64,7 +69,7 @@ class SnapclipSessionStrategy(AbstractStrategy):
 
         return str(hash_fn(url).to_bytes(8, "big").hex())
 
-    async def run(self, url: str) -> str | None:
+    async def run(self, url: str) -> Answer | None:
         hashed_url = self._hash(url)
         file_path = path.join(getcwd(), 'tmp', f'{hashed_url}.html')
         async with ClientSession() as session:
@@ -124,7 +129,7 @@ class SnapclipSessionStrategy(AbstractStrategy):
                     r'<a href=\"(\S*)\" class=\"abutton is-success is-fullwidth btn-premium mt-3\" rel=\"nofollow\" title=\"Download Video\">',
                     result,
                 ).group(1)
-                return video_url
+                return Answer([Link(video_url)], result_type=ResultType.video_url)
             except IndexError as e:
                 logger.error(e)
                 return
@@ -139,14 +144,14 @@ class SnapclipPlaywrightStrategy(AbstractStrategy):
                 await page.goto("https://snapclip.app/en")
                 await page.get_by_role("textbox").fill(url)
 
-                await sleep(0.5)
+                await asyncio.sleep(0.5)
                 await page.get_by_role("button").click()
                 try:
                     await page.wait_for_selector("#closeModalBtn")
                     await (await page.query_selector("#closeModalBtn")).click()
                 except (PWTimeoutError, Error):
                     try:
-                        await page.screenshot(path="/tmp/close_modal_not_found.png")
+                        await page.screenshot(path=path.join(tempfile.gettempdir(), "close_modal_not_found.png"))
                     except Error:
                         pass
                     logger.info(
@@ -163,7 +168,7 @@ class SnapclipPlaywrightStrategy(AbstractStrategy):
                     _url = await result_button.get_attribute("href")
                     return Answer([Link(_url)])
                 except PWTimeoutError:
-                    await page.screenshot(path="/tmp/result_not_found.png")
+                    await page.screenshot(path=path.join(tempfile.gettempdir(), "result_not_found.png"))
                     logger.info(
                         f"{self.__class__.__name__} failed to find search result"
                     )
@@ -171,7 +176,7 @@ class SnapclipPlaywrightStrategy(AbstractStrategy):
 
             except (AttributeError, Error) as e:
                 try:
-                    await page.screenshot(path="/tmp/scr.png")
+                    await page.screenshot(path=path.join(tempfile.gettempdir(), "scr.png"))
                 except Error:
                     pass
                 logger.error(str(e))
@@ -184,8 +189,10 @@ class DDInstaStrategy(AbstractStrategy):
 
 
 def extract_id(text: str) -> str:
-    _id = re.search(r"https://[w.]*instagram\.com/[reel|share|p]*/([^/]*)/*", text).group(1)
-    return f"IG:{_id}"
+    match = re.search(r"https://[w.]*instagram\.com/(reel|share|p)/([^/]*)/*", text)
+    if not match:
+        raise ValueError(f"Could not extract Instagram ID from: {text}")
+    return f"IG:{match.group(2)}"
 
 
 async def preprocess_url(url: str) -> str:

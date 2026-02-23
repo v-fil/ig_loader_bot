@@ -51,7 +51,7 @@ class Registry:
 
         try:
             _id = registry_item.extract_id(url)
-        except AttributeError:
+        except (AttributeError, ValueError):
             logger.info(f"[{provider}] got url '{url}', could not extract id")
             _id = url
 

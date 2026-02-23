@@ -14,8 +14,10 @@ import sentry_sdk
 from filters import UrlFilter, url_regex
 from strategies import Provider, get_provider_by_url, registry
 
+logger = logging.getLogger(__name__)
+
 TOKEN = getenv("BOT_TOKEN")
-DEBUG = getenv("DEBUG", False)
+DEBUG = getenv("DEBUG", "").lower() in ("1", "true", "yes")
 SENTRY_DSN = getenv("SENTRY_DSN")
 
 
@@ -48,7 +50,7 @@ async def handler(message: Message) -> None:
         async with asyncio.timeout(120):
             await asyncio.gather(*coroutines)
     except TimeoutError:
-        pass
+        logger.error(f"Timeout (120s) processing URLs: {urls}")
 
 
 @dp.message(Command('ping'))

@@ -8,7 +8,7 @@ from aiohttp import ClientSession
 from strategies.base import AbstractStrategy
 from strategies.utils import Answer, Link
 
-DEBUG = getenv("DEBUG", False)
+DEBUG = getenv("DEBUG", "").lower() in ("1", "true", "yes")
 
 logger = logging.getLogger()
 
@@ -44,13 +44,20 @@ class SnaptikSessionStrategy(AbstractStrategy):
 
 
 def extract_id(text: str) -> str:
-    _id = re.search(r"https://vm.tiktok.com/(\S*)/", text).group(1)
-    return f"TIKTOK:{_id}"
+    match = re.search(r"https://vm\.tiktok\.com/(\S*)/", text)
+    if not match:
+        match = re.search(r"https://[w.]*tiktok\.com/.*/video/(\d+)", text)
+    if not match:
+        raise ValueError(f"Could not extract TikTok ID from: {text}")
+    return f"TIKTOK:{match.group(1)}"
 
 
 async def preprocess_url(url: str) -> str:
     if 'vm.tiktok' in url:
         async with ClientSession() as session:
             result = await session.get(url, allow_redirects=False)
-            return result.headers['Location']
+            location = result.headers.get('Location')
+            if location:
+                return location
+            logger.warning(f"No redirect Location header for TikTok URL: {url}")
     return url
