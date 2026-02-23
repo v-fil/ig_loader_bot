@@ -111,6 +111,14 @@ async def answer_with_album(answer: Answer, message: Message) -> None:
             coroutines.append(download_file(item.url, item.filetype, item.filename, session))
         resp = await gather(*coroutines)
 
-        if not any((isinstance(i, InputMedia) for i in resp)):
+        # Filter out None results from failed downloads
+        media_items = [i for i in resp if isinstance(i, InputMedia)]
+
+        if not media_items:
             raise UploadError
-    await message.reply_media_group(resp, reply_to_message_id=message.message_id)
+
+    # Telegram limits media groups to 10 items, split into chunks
+    chunk_size = 10
+    for i in range(0, len(media_items), chunk_size):
+        chunk = media_items[i:i + chunk_size]
+        await message.reply_media_group(chunk, reply_to_message_id=message.message_id)
