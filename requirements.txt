@@ -1,6 +1,7 @@
 aiogram
 aiohttp
 instaloader
+dukpy
 newrelic
 playwright
 pytubefix

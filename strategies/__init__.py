@@ -11,8 +11,8 @@ registry = Registry(
         Provider.instagram: RegistryItem(
             strategies=[
                 ig.InstaloaderStrategy(),
-                ig.SnapclipSessionStrategy(),
-                ig.SnapclipPlaywrightStrategy(),
+                ig.FastDLSessionStrategy(),
+                ig.FastDLPlaywrightStrategy(),
                 ig.DDInstaStrategy()
             ],
             extract_id=ig.extract_id,

@@ -1,10 +1,10 @@
 import asyncio
-import ctypes
 import logging
 import re
 import tempfile
-from os import getcwd, getenv, path, remove
+from os import getcwd, getenv, path
 
+import dukpy
 import requests
 from aiohttp import ClientSession
 import instaloader
@@ -61,21 +61,12 @@ class InstaloaderStrategy(AbstractStrategy):
         return await asyncio.to_thread(self._load_post, url)
 
 
-class SnapclipSessionStrategy(AbstractStrategy):
-    @staticmethod
-    def _hash(url):
-        def hash_fn(word):
-            return ctypes.c_uint64(hash(word)).value
-
-        return str(hash_fn(url).to_bytes(8, "big").hex())
-
+class FastDLSessionStrategy(AbstractStrategy):
     async def run(self, url: str) -> Answer | None:
-        hashed_url = self._hash(url)
-        file_path = path.join(getcwd(), 'tmp', f'{hashed_url}.html')
         async with ClientSession() as session:
             # try to get correct headers
             get_resp = await session.get(
-                'https://snapclip.app/en',
+                'https://fastdl.dev/en',
                 headers={
                     'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,'
                               'image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
@@ -96,7 +87,7 @@ class SnapclipSessionStrategy(AbstractStrategy):
             if get_resp.status != 200:
                 return None
             result = await session.post(
-                'https://snapclip.app/api/ajaxSearch',
+                'https://fastdl.dev/api/ajaxSearch',
                 data={
                     'q': url,
                     't': 'media',
@@ -113,35 +104,55 @@ class SnapclipSessionStrategy(AbstractStrategy):
             if 'data' not in data:
                 logger.error(f'url loaded with incomplete result: {data}')
                 return None
-            code = data['data'].replace('return decodeURIComponent', 'document.res = decodeURIComponent')
-            with open(file_path, 'w') as f:
-                f.write(f'''<!DOCTYPE html><html lang="en"><body><script>{code}</script></body></html>''')
-        async with async_playwright() as p:
-            browser = await p.chromium.launch(headless=not DEBUG)
-            page = await browser.new_page()
-            await page.goto(f'file://{file_path}')
-            result = (await page.evaluate('() => document.res')).replace('\\', '')
 
-            remove(file_path)
+            code = data['data']
+            preamble = (
+                'var location = {hostname: "fastdl.dev", href: "https://fastdl.dev/en"};'
+                'var __captured = {};'
+                'function FakeEl() { this.innerHTML = ""; this.style = {}; this.children = []; this.appendChild = function(){}; this.setAttribute = function(){}; }'
+                'var document = {location: location,'
+                '  getElementById: function(id) { if(!__captured[id]) __captured[id] = new FakeEl(); return __captured[id]; },'
+                '  querySelector: function() { return new FakeEl(); },'
+                '  createElement: function() { return new FakeEl(); }'
+                '};'
+                'var window = {location: location, document: document};'
+            )
+            epilogue = 'var __vals = []; for(var k in __captured) __vals.push(__captured[k].innerHTML); __vals.join("|||");'
+            decoded = await asyncio.to_thread(dukpy.evaljs, f'{preamble} (function() {{ {code} }})(); {epilogue}')
+            result = str(decoded).replace('\\', '')
+            # Images/carousels: URLs in <option value="URL"> inside <li> items
+            # Videos: URL in <a href="URL" title="Download Video"> (not inside <li>)
+            links = []
+            for item in re.split(r'<li>', result):
+                dl_url = re.search(r'<option value="(https://dl\.snapcdn\.app/[^"]*)"', item)
+                if dl_url:
+                    ft = FileType.video if 'icon-dlvideo' in item else FileType.img
+                    links.append(Link(dl_url.group(1), file_type=ft))
 
-            try:
-                video_url = re.search(
-                    r'<a href=\"(\S*)\" class=\"abutton is-success is-fullwidth btn-premium mt-3\" rel=\"nofollow\" title=\"Download Video\">',
-                    result,
-                ).group(1)
-                return Answer([Link(video_url)], result_type=ResultType.video_url)
-            except IndexError as e:
-                logger.error(e)
-                return
+            if not links:
+                dl_url = re.search(r'href="(https://dl\.snapcdn\.app/[^"]*)"[^>]*title="Download Video"', result)
+                if not dl_url:
+                    dl_url = re.search(r'title="Download Video"[^>]*href="(https://dl\.snapcdn\.app/[^"]*)"', result)
+                if dl_url:
+                    links.append(Link(dl_url.group(1), file_type=FileType.video))
+
+            if not links:
+                logger.error(f'fastdl: no download links found in result')
+                return None
+
+            if len(links) == 1:
+                rt = ResultType.video_url if links[0].filetype == FileType.video else ResultType.url
+                return Answer(links, result_type=rt)
+            return Answer(links, result_type=ResultType.items_list)
 
 
-class SnapclipPlaywrightStrategy(AbstractStrategy):
+class FastDLPlaywrightStrategy(AbstractStrategy):
     async def run(self, url: str) -> Answer | None:
         async with async_playwright() as p:
             browser = await p.chromium.launch(headless=not DEBUG)
             page = await browser.new_page()
             try:
-                await page.goto("https://snapclip.app/en")
+                await page.goto("https://fastdl.dev/")
                 await page.get_by_role("textbox").fill(url)
 
                 await asyncio.sleep(0.5)
