@@ -44,16 +44,16 @@ class SnaptikSessionStrategy(AbstractStrategy):
 
 
 def extract_id(text: str) -> str:
-    match = re.search(r"https://vm\.tiktok\.com/(\S*)/", text)
+    match = re.search(r"https://\S+?\.tiktok\.com/.*/video/(\d+)", text)
     if not match:
-        match = re.search(r"https://[w.]*tiktok\.com/.*/video/(\d+)", text)
+        match = re.search(r"https://\S+?\.tiktok\.com/(\S+?)/", text)
     if not match:
         raise ValueError(f"Could not extract TikTok ID from: {text}")
     return f"TIKTOK:{match.group(1)}"
 
 
 async def preprocess_url(url: str) -> str:
-    if 'vm.tiktok' in url:
+    if re.match(r"https://v[a-z]\.tiktok\.com/", url):
         async with ClientSession() as session:
             result = await session.get(url, allow_redirects=False)
             location = result.headers.get('Location')
