@@ -100,8 +100,12 @@ class FastDLSessionStrategy(AbstractStrategy):
                 logger.error(await result.text())
                 return None
 
-            data = await result.json()
-            if 'data' not in data:
+            try:
+                data = await result.json(content_type=None)
+            except ValueError:
+                logger.error(f'fastdl: non-JSON response: {(await result.text())[:500]}')
+                return None
+            if not isinstance(data, dict) or 'data' not in data:
                 logger.error(f'url loaded with incomplete result: {data}')
                 return None
 
