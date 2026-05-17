@@ -19,7 +19,7 @@ registry = Registry(
             preprocess_url=ig.preprocess_url,
         ),
         Provider.twitter: RegistryItem(
-            strategies=[x.SSSPlaywrightStrategy(), x.TwitterLoadStrategy()],
+            strategies=[x.FxTwitterStrategy()],
             extract_id=x.extract_id,
         ),
         Provider.tiktok: RegistryItem(
