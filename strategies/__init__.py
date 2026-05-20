@@ -13,7 +13,6 @@ registry = Registry(
                 ig.InstaloaderStrategy(),
                 ig.FastDLSessionStrategy(),
                 ig.FastDLPlaywrightStrategy(),
-                ig.DDInstaStrategy()
             ],
             extract_id=ig.extract_id,
             preprocess_url=ig.preprocess_url,

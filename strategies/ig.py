@@ -66,7 +66,7 @@ class FastDLSessionStrategy(AbstractStrategy):
         async with ClientSession() as session:
             # try to get correct headers
             get_resp = await session.get(
-                'https://fastdl.dev/en',
+                'https://fastdown.to/en',
                 headers={
                     'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,'
                               'image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
@@ -87,7 +87,7 @@ class FastDLSessionStrategy(AbstractStrategy):
             if get_resp.status != 200:
                 return None
             result = await session.post(
-                'https://fastdl.dev/api/ajaxSearch',
+                'https://fastdown.to/api/ajaxSearch',
                 data={
                     'q': url,
                     't': 'media',
@@ -111,7 +111,7 @@ class FastDLSessionStrategy(AbstractStrategy):
 
             code = data['data']
             preamble = (
-                'var location = {hostname: "fastdl.dev", href: "https://fastdl.dev/en"};'
+                'var location = {hostname: "fastdown.to", href: "https://fastdown.to/en"};'
                 'var __captured = {};'
                 'function FakeEl() { this.innerHTML = ""; this.style = {}; this.children = []; this.appendChild = function(){}; this.setAttribute = function(){}; }'
                 'var document = {location: location,'
@@ -156,7 +156,7 @@ class FastDLPlaywrightStrategy(AbstractStrategy):
             browser = await p.chromium.launch(headless=not DEBUG)
             page = await browser.new_page()
             try:
-                await page.goto("https://fastdl.dev/")
+                await page.goto("https://fastdown.to/")
                 await page.get_by_role("textbox").fill(url)
 
                 await asyncio.sleep(0.5)
@@ -195,12 +195,6 @@ class FastDLPlaywrightStrategy(AbstractStrategy):
                 except Error:
                     pass
                 logger.error(str(e))
-
-
-class DDInstaStrategy(AbstractStrategy):
-    async def run(self, url: str) -> Answer | None:
-        dd_url = re.sub("https://([w.]*)?", "https://d.dd", url)
-        return Answer([Link(dd_url)], result_type=ResultType.url)
 
 
 def extract_id(text: str) -> str:
