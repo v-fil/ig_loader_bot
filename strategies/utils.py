@@ -1,5 +1,7 @@
 import asyncio
 import logging
+import os
+import tempfile
 
 import requests
 from aiogram.exceptions import TelegramNetworkError
@@ -11,6 +13,10 @@ from .types import FileType, ResultType
 
 
 logger = logging.getLogger()
+
+# Telegram bots may upload files up to 50 MB; aim a bit lower to leave headroom.
+TG_SIZE_LIMIT = 50 * 1024 * 1024
+TRANSCODE_TARGET = 45 * 1024 * 1024
 
 
 class UploadError(Exception):
@@ -51,6 +57,62 @@ async def get_content(result: ClientResponse) -> bytes | None:
         logger.info(f"Download failed status:{result.status} reason: {result.reason} text: {text}")
 
 
+async def _ffprobe_duration(path: str) -> float | None:
+    proc = await asyncio.create_subprocess_exec(
+        'ffprobe', '-v', 'error', '-show_entries', 'format=duration',
+        '-of', 'default=noprint_wrappers=1:nokey=1', path,
+        stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.DEVNULL,
+    )
+    out, _ = await proc.communicate()
+    try:
+        return float(out.decode().strip())
+    except (ValueError, AttributeError):
+        return None
+
+
+async def transcode_video(content: bytes) -> bytes | None:
+    """Re-encode an oversized video so it fits under Telegram's upload limit."""
+    with tempfile.TemporaryDirectory() as tmp:
+        src = os.path.join(tmp, 'src.mp4')
+        dst = os.path.join(tmp, 'out.mp4')
+        with open(src, 'wb') as f:
+            f.write(content)
+
+        duration = await _ffprobe_duration(src)
+        if not duration:
+            logger.error('transcode: could not determine video duration')
+            return None
+
+        # Pick a video bitrate that, together with the audio, lands under the target size.
+        audio_bitrate = 128_000
+        video_bitrate = max(int(TRANSCODE_TARGET * 8 / duration) - audio_bitrate, 100_000)
+        logger.info(f'transcode: duration={duration:.0f}s, video bitrate={video_bitrate}')
+
+        proc = await asyncio.create_subprocess_exec(
+            'ffmpeg', '-y', '-i', src,
+            '-c:v', 'libx264', '-preset', 'veryfast',
+            '-b:v', str(video_bitrate), '-maxrate', str(video_bitrate),
+            '-bufsize', str(video_bitrate * 2),
+            '-vf', 'scale=1280:720:force_original_aspect_ratio=decrease:force_divisible_by=2',
+            '-c:a', 'aac', '-b:a', '128k',
+            '-movflags', '+faststart',
+            dst,
+            stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.PIPE,
+        )
+        _, err = await proc.communicate()
+        if proc.returncode != 0:
+            logger.error(f'transcode: ffmpeg failed: {err.decode(errors="replace")[-500:]}')
+            return None
+
+        with open(dst, 'rb') as f:
+            result = f.read()
+        logger.info(f'transcode: {len(content)} -> {len(result)} bytes')
+        if len(result) > TG_SIZE_LIMIT:
+            logger.error('transcode: result still exceeds Telegram limit')
+            return None
+        return result
+
+
 async def answer_with_url(url: str, message: Message) -> None:
     content = TextLink("url", url=url)
     await message.answer(**content.as_kwargs(), reply_to_message_id=message.message_id)
@@ -77,6 +139,10 @@ async def upload_video(url: str, message: Message) -> bool:
         async with ClientSession() as session:
             result = await session.get(url)
             content = await get_content(result)
+
+    if content and len(content) > TG_SIZE_LIMIT:
+        logger.info(f"{len(content)} bytes exceeds Telegram limit, transcoding")
+        content = await transcode_video(content)
 
     if content:
         tg_file = BufferedInputFile(content, "ig_file.mp4")
