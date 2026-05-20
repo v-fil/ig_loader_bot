@@ -118,13 +118,31 @@ async def answer_with_url(url: str, message: Message) -> None:
     await message.answer(**content.as_kwargs(), reply_to_message_id=message.message_id)
 
 
-async def upload_video(url: str, message: Message) -> bool:
-    file = URLInputFile(url)
+async def _remote_size(url: str) -> int | None:
+    """Return Content-Length for a URL via a HEAD request, or None if unknown."""
     try:
-        await message.answer_video(file, reply_to_message_id=message.message_id, supports_streaming=True)
-        return True
-    except TelegramNetworkError as e:
-        logger.error(f"Telegram Network Error: {e}")
+        async with ClientSession() as session:
+            async with session.head(url, allow_redirects=True) as resp:
+                length = resp.headers.get('Content-Length')
+                return int(length) if length else None
+    except (ClientPayloadError, ValueError, OSError) as e:
+        logger.info(f"HEAD request failed for {url}: {e}")
+        return None
+
+
+async def upload_video(url: str, message: Message) -> bool:
+    # Letting Telegram fetch the URL itself is the cheap path, but it fails for
+    # oversized files - skip straight to download + transcode if we know it's too big.
+    size = await _remote_size(url)
+    if size is None or size <= TG_SIZE_LIMIT:
+        file = URLInputFile(url)
+        try:
+            await message.answer_video(file, reply_to_message_id=message.message_id, supports_streaming=True)
+            return True
+        except TelegramNetworkError as e:
+            logger.error(f"Telegram Network Error: {e}")
+    else:
+        logger.info(f"{size} bytes exceeds Telegram limit, skipping URL upload")
 
     logger.info(f"Trying to download {url}")
 
