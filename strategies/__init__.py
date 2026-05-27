@@ -1,4 +1,4 @@
-from . import ig, tiktok, x, yt
+from . import ig, threads, tiktok, x, yt
 from .base import Provider, Registry, RegistryItem, get_provider_by_url
 
 __all__ = [
@@ -25,6 +25,10 @@ registry = Registry(
             strategies=[tiktok.SnaptikSessionStrategy()],
             extract_id=tiktok.extract_id,
             preprocess_url=tiktok.preprocess_url,
+        ),
+        Provider.threads: RegistryItem(
+            strategies=[threads.ThreadsStrategy()],
+            extract_id=threads.extract_id,
         ),
         Provider.youtube: RegistryItem(
             # disable YouTube for now

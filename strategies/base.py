@@ -5,7 +5,7 @@ from typing import Optional
 
 from aiogram import types
 
-from strategies.utils import answer_with_url, upload_video, Answer, answer_with_album, UploadError
+from strategies.utils import answer_with_url, upload_video, Answer, answer_with_album, answer_with_text, UploadError
 
 from .types import FilterUrlRegex, ResultType, Provider
 
@@ -82,6 +82,11 @@ class Registry:
                 elif result.result_type == ResultType.url:
                     logger.info(f"[{_id}] trying to upload result")
                     await answer_with_url(result.links[0].url, message)
+                    return
+
+                elif result.result_type == ResultType.text:
+                    logger.info(f"[{_id}] sending text answer")
+                    await answer_with_text(result, message)
                     return
 
                 elif result.result_type == ResultType.items_list:

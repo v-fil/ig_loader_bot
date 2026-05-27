@@ -5,6 +5,7 @@ class ResultType(Enum):
     url = "url"
     video_url = "video_url"
     items_list = "items_list"
+    text = "text"
 
 
 class Provider(Enum):
@@ -12,6 +13,7 @@ class Provider(Enum):
     tiktok = "tiktok"
     twitter = "twitter"
     youtube = "youtube"
+    threads = "threads"
 
 
 class FilterUrlRegex(Enum):
@@ -19,6 +21,7 @@ class FilterUrlRegex(Enum):
     tiktok = r"https://\S*\.tiktok\.com/\S*"
     twitter = r"https://x.com/\S*"
     youtube = r"https://[w.]*youtube.com/shorts/\S*"
+    threads = r"https://(?:www\.)?threads\.(?:net|com)/(?:t/[\w-]+|@[\w.\-]+/post/[\w-]+)\S*"
 
 
 class FileType(Enum):

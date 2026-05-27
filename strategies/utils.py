@@ -36,10 +36,17 @@ class Link:
 class Answer:
     result_type: ResultType
     links: list[Link]
+    text: str | None
 
-    def __init__(self, links: list[Link] | None = None, result_type: ResultType = ResultType.video_url):
+    def __init__(
+        self,
+        links: list[Link] | None = None,
+        result_type: ResultType = ResultType.video_url,
+        text: str | None = None,
+    ):
         self.result_type = result_type
         self.links = links or []
+        self.text = text
 
 
 async def get_content(result: ClientResponse) -> bytes | None:
@@ -186,6 +193,44 @@ async def download_file(
         return InputMediaPhoto(media=BufferedInputFile(content, filename))
 
 
+TG_CAPTION_LIMIT = 1024
+TG_TEXT_LIMIT = 4096
+
+
+def _split_text(text: str, limit: int) -> list[str]:
+    if len(text) <= limit:
+        return [text]
+    chunks: list[str] = []
+    remaining = text
+    while len(remaining) > limit:
+        window = remaining[:limit]
+        for sep in ("\n\n", "\n", " "):
+            idx = window.rfind(sep)
+            if idx >= limit // 3:
+                cut = idx + len(sep)
+                chunks.append(remaining[:cut].rstrip())
+                remaining = remaining[cut:].lstrip()
+                break
+        else:
+            chunks.append(remaining[:limit])
+            remaining = remaining[limit:]
+    if remaining:
+        chunks.append(remaining)
+    return chunks
+
+
+async def answer_with_text(answer: Answer, message: Message) -> None:
+    text = (answer.text or "").strip()
+    if not text:
+        return
+    for chunk in _split_text(text, TG_TEXT_LIMIT):
+        await message.answer(
+            chunk,
+            reply_to_message_id=message.message_id,
+            disable_web_page_preview=True,
+        )
+
+
 async def answer_with_album(answer: Answer, message: Message) -> None:
     coroutines = []
 
@@ -200,8 +245,25 @@ async def answer_with_album(answer: Answer, message: Message) -> None:
         if not media_items:
             raise UploadError
 
+    text = (answer.text or "").strip()
+    leftover_text: str | None = None
+    if text:
+        if len(text) <= TG_CAPTION_LIMIT:
+            media_items[0].caption = text
+        else:
+            # Caption too long; send the full text as a follow-up reply.
+            leftover_text = text
+
     # Telegram limits media groups to 10 items, split into chunks
     chunk_size = 10
     for i in range(0, len(media_items), chunk_size):
         chunk = media_items[i:i + chunk_size]
         await message.reply_media_group(chunk, reply_to_message_id=message.message_id)
+
+    if leftover_text:
+        for chunk in _split_text(leftover_text, TG_TEXT_LIMIT):
+            await message.answer(
+                chunk,
+                reply_to_message_id=message.message_id,
+                disable_web_page_preview=True,
+            )
