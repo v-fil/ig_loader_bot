@@ -3,11 +3,11 @@ import logging
 import os
 import tempfile
 
-import requests
 from aiogram.exceptions import TelegramNetworkError
 from aiogram.types import BufferedInputFile, Message, URLInputFile, InputMediaVideo, InputMediaPhoto, InputMedia
 from aiogram.utils.formatting import TextLink
 from aiohttp import ClientError, ClientPayloadError, ClientResponse, ClientSession, ClientTimeout
+from yarl import URL
 
 from .types import FileType, ResultType
 
@@ -133,7 +133,7 @@ async def _remote_size(url: str) -> int | None:
     """Return Content-Length for a URL via a HEAD request, or None if unknown."""
     try:
         async with ClientSession(timeout=ClientTimeout(total=15)) as session:
-            async with session.head(url, allow_redirects=True) as resp:
+            async with session.head(URL(url, encoded=True), allow_redirects=True) as resp:
                 length = resp.headers.get('Content-Length')
                 return int(length) if length else None
     except (ClientError, asyncio.TimeoutError, ValueError, OSError) as e:
@@ -157,21 +157,16 @@ async def upload_video(url: str, message: Message) -> bool:
 
     logger.info(f"Trying to download {url}")
 
-    # TODO: find out why instagram returns URL mismatch if load using asyncio
-    if 'instagram' in url:
-        try:
-            resp = await asyncio.to_thread(requests.get, url, timeout=60)
-        except requests.RequestException as e:
-            logger.error(f"Download failed for {url}: {e}")
-            return False
-        content = resp.content
-        if resp.headers.get('Content-Type') == 'text/plain':
-            logger.info('Got invalid content type')
-            return False
-    else:
-        async with ClientSession() as session:
-            async with session.get(url) as result:
-                content = await get_content(result)
+    # IG CDN URLs are signed over the exact path+query bytes; yarl's default
+    # re-quoting decodes escapes like %21/%2C, which breaks the signature and
+    # the CDN answers "URL signature mismatch". encoded=True sends the URL
+    # byte-for-byte as received.
+    async with ClientSession() as session:
+        async with session.get(URL(url, encoded=True)) as result:
+            if result.headers.get('Content-Type', '').startswith('text/plain'):
+                logger.info('Got invalid content type')
+                return False
+            content = await get_content(result)
 
     if content and len(content) > TG_SIZE_LIMIT:
         logger.info(f"{len(content)} bytes exceeds Telegram limit, transcoding")
@@ -191,7 +186,7 @@ async def upload_video(url: str, message: Message) -> bool:
 async def download_file(
         url: str, file_type: FileType, filename: str, session: ClientSession
 ) -> InputMediaVideo | InputMediaPhoto | None:
-    async with session.get(url) as result:
+    async with session.get(URL(url, encoded=True)) as result:
         content = await get_content(result)
     if not content:
         return

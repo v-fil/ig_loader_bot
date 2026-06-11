@@ -5,5 +5,4 @@ dukpy
 newrelic
 playwright
 pytubefix
-requests
 sentry-sdk

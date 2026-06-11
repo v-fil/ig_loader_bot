@@ -5,7 +5,6 @@ import tempfile
 from os import getcwd, getenv, path
 
 import dukpy
-import requests
 from aiohttp import ClientSession
 import instaloader
 from playwright.async_api import Error
