@@ -157,7 +157,7 @@ async def upload_video(url: str, message: Message) -> bool:
     if 'instagram' in url:
         resp = await asyncio.to_thread(requests.get, url)
         content = resp.content
-        if resp.headers['Content-Type'] == 'text/plain':
+        if resp.headers.get('Content-Type') == 'text/plain':
             logger.info('Got invalid content type')
             return False
     else:

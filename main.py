@@ -13,6 +13,7 @@ import sentry_sdk
 
 from filters import UrlFilter, url_regex
 from strategies import Provider, get_provider_by_url, registry
+from strategies.ig import check_session
 
 logger = logging.getLogger(__name__)
 
@@ -82,6 +83,8 @@ if __name__ == "__main__":
                 "continuous_profiling_auto_start": True,
             },
         )
+
+    check_session()
 
     logger.info(f'Initialization complete.')
 

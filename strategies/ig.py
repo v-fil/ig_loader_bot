@@ -19,13 +19,46 @@ DEBUG = getenv("DEBUG", "").lower() in ("1", "true", "yes")
 
 logger = logging.getLogger()
 
+SESSION_FILE = path.join(getcwd(), 'tmp', 'ig.session')
+
+
+def check_session() -> None:
+    """Log the Instagram session status so auth problems are visible at startup.
+
+    Without a valid session instaloader falls back to anonymous requests, which
+    Instagram rate-limits hard (429/500) - the most common cause of failed IG
+    downloads. This makes that state obvious in the logs instead of silent.
+    """
+    loader = instaloader.Instaloader(iphone_support=False)
+    try:
+        loader.load_session_from_file(username='stub', filename=SESSION_FILE)
+    except FileNotFoundError:
+        logger.warning(f"IG session: no file at {SESSION_FILE} - running anonymously, downloads will be rate-limited")
+        return
+
+    sessionid = loader.context._session.cookies.get('sessionid')
+    if not sessionid:
+        logger.warning("IG session: file present but sessionid is empty - running anonymously, downloads will be rate-limited")
+        return
+
+    try:
+        username = loader.test_login()
+    except Exception as e:  # network/parse errors shouldn't block startup
+        logger.error(f"IG session: could not validate sessionid ({e}) - continuing")
+        return
+
+    if username:
+        logger.info(f"IG session: authenticated as @{username}")
+    else:
+        logger.warning("IG session: sessionid is invalid (expired or logged out) - re-authenticate")
+
 
 class InstaloaderStrategy(AbstractStrategy):
     @staticmethod
     def _load_post(url: str) -> Answer | None:
         loader = instaloader.Instaloader(iphone_support=False)
         try:
-            loader.load_session_from_file(username='stub', filename=path.join(getcwd(), 'tmp', 'ig.session'))
+            loader.load_session_from_file(username='stub', filename=SESSION_FILE)
         except FileNotFoundError:
             pass
         try:
