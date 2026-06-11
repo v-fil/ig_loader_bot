@@ -7,7 +7,7 @@ import requests
 from aiogram.exceptions import TelegramNetworkError
 from aiogram.types import BufferedInputFile, Message, URLInputFile, InputMediaVideo, InputMediaPhoto, InputMedia
 from aiogram.utils.formatting import TextLink
-from aiohttp import ClientSession, ClientPayloadError, ClientResponse
+from aiohttp import ClientError, ClientPayloadError, ClientResponse, ClientSession, ClientTimeout
 
 from .types import FileType, ResultType
 
@@ -17,6 +17,10 @@ logger = logging.getLogger()
 # Telegram bots may upload files up to 50 MB; aim a bit lower to leave headroom.
 TG_SIZE_LIMIT = 50 * 1024 * 1024
 TRANSCODE_TARGET = 45 * 1024 * 1024
+
+# Shared browser User-Agent for scraping strategies.
+USER_AGENT = ('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
+              '(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36')
 
 
 class UploadError(Exception):
@@ -128,11 +132,11 @@ async def answer_with_url(url: str, message: Message) -> None:
 async def _remote_size(url: str) -> int | None:
     """Return Content-Length for a URL via a HEAD request, or None if unknown."""
     try:
-        async with ClientSession() as session:
+        async with ClientSession(timeout=ClientTimeout(total=15)) as session:
             async with session.head(url, allow_redirects=True) as resp:
                 length = resp.headers.get('Content-Length')
                 return int(length) if length else None
-    except (ClientPayloadError, ValueError, OSError) as e:
+    except (ClientError, asyncio.TimeoutError, ValueError, OSError) as e:
         logger.info(f"HEAD request failed for {url}: {e}")
         return None
 
@@ -155,15 +159,19 @@ async def upload_video(url: str, message: Message) -> bool:
 
     # TODO: find out why instagram returns URL mismatch if load using asyncio
     if 'instagram' in url:
-        resp = await asyncio.to_thread(requests.get, url)
+        try:
+            resp = await asyncio.to_thread(requests.get, url, timeout=60)
+        except requests.RequestException as e:
+            logger.error(f"Download failed for {url}: {e}")
+            return False
         content = resp.content
         if resp.headers.get('Content-Type') == 'text/plain':
             logger.info('Got invalid content type')
             return False
     else:
         async with ClientSession() as session:
-            result = await session.get(url)
-            content = await get_content(result)
+            async with session.get(url) as result:
+                content = await get_content(result)
 
     if content and len(content) > TG_SIZE_LIMIT:
         logger.info(f"{len(content)} bytes exceeds Telegram limit, transcoding")
@@ -181,10 +189,10 @@ async def upload_video(url: str, message: Message) -> bool:
 
 
 async def download_file(
-        url: str, file_type: str, filename: str, session: ClientSession
+        url: str, file_type: FileType, filename: str, session: ClientSession
 ) -> InputMediaVideo | InputMediaPhoto | None:
-    result = await session.get(url)
-    content = await get_content(result)
+    async with session.get(url) as result:
+        content = await get_content(result)
     if not content:
         return
     if file_type == FileType.video:

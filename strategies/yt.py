@@ -12,7 +12,7 @@ from strategies.utils import Answer, Link
 class PytubeYtStrategy(AbstractStrategy):
     async def run(self, url: str) -> Answer | None:
         try:
-            short_url = re.findall(r"(https://[w.]*youtube.com/shorts/\S*)", url)
+            short_url = re.findall(r"(https://[w.]*youtube\.com/shorts/\S*)", url)
             if not short_url:
                 return
             yt = YouTube(

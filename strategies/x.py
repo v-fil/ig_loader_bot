@@ -22,15 +22,15 @@ class FxTwitterStrategy(AbstractStrategy):
         screen_name, status_id = match.group(1), match.group(2)
 
         async with ClientSession() as session:
-            resp = await session.get(f"{self.api_base}/{screen_name}/status/{status_id}")
-            if resp.status != 200:
-                logger.error(f"fxtwitter returned status {resp.status} for {status_id}")
-                return None
-            try:
-                data = await resp.json(content_type=None)
-            except Exception as e:
-                logger.error(f"fxtwitter returned non-JSON: {e}")
-                return None
+            async with session.get(f"{self.api_base}/{screen_name}/status/{status_id}") as resp:
+                if resp.status != 200:
+                    logger.error(f"fxtwitter returned status {resp.status} for {status_id}")
+                    return None
+                try:
+                    data = await resp.json(content_type=None)
+                except Exception as e:
+                    logger.error(f"fxtwitter returned non-JSON: {e}")
+                    return None
 
         media = (data.get("tweet") or {}).get("media") or {}
         items = media.get("all") or []

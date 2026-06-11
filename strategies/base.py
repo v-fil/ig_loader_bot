@@ -96,7 +96,7 @@ class Registry:
                     except UploadError:
                         continue
                     return
-        else:
-            if result:
-                await answer_with_url(result.links[0].url, message)
-            logger.info(f"[{_id}] No strategies left, exiting")
+
+        if result:
+            await answer_with_url(result.links[0].url, message)
+        logger.info(f"[{_id}] No strategies left, exiting")

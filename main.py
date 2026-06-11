@@ -66,8 +66,10 @@ async def main() -> None:
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, stream=sys.stdout)
-    logger = logging.getLogger()
     logger.info(f'Launching with DEBUG mode: {"on" if DEBUG else "off"}')
+
+    if not TOKEN:
+        sys.exit("BOT_TOKEN environment variable is required")
 
     if not DEBUG:
         newrelic.agent.initialize(join(getcwd(), 'newrelic.ini'), environment='production')
@@ -86,6 +88,6 @@ if __name__ == "__main__":
 
     check_session()
 
-    logger.info(f'Initialization complete.')
+    logger.info('Initialization complete.')
 
     asyncio.run(main())
