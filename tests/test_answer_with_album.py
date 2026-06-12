@@ -98,6 +98,55 @@ async def test_very_long_caption_split_into_multiple_messages(mock_http, message
     assert sent.split() == caption.split()
 
 
+async def test_single_image_sent_as_photo_not_media_group(mock_http, message):
+    mock_http.get(CDN, body=b"IMG", content_type="image/jpeg")
+
+    await answer_with_album(make_answer(1, text="caption"), message)
+
+    message.reply_media_group.assert_not_awaited()
+    message.answer_photo.assert_awaited_once()
+    file = message.answer_photo.await_args.args[0]
+    assert file.filename == "0.jpg"
+    assert message.answer_photo.await_args.kwargs["caption"] == "caption"
+
+
+async def test_single_video_sent_as_video_not_media_group(mock_http, message):
+    mock_http.get(CDN, body=b"VID", content_type="video/mp4")
+    answer = Answer(
+        links=[Link(url="https://cdn.example/a", file_type=FileType.video, filename="a.mp4")],
+        result_type=ResultType.items_list,
+    )
+
+    await answer_with_album(answer, message)
+
+    message.reply_media_group.assert_not_awaited()
+    message.answer_video.assert_awaited_once()
+    assert message.answer_video.await_args.args[0].filename == "a.mp4"
+
+
+async def test_single_item_long_caption_sent_as_followup_text(mock_http, message):
+    mock_http.get(CDN, body=b"IMG", content_type="image/jpeg")
+    caption = "x" * 1500  # over the 1024 caption limit
+
+    await answer_with_album(make_answer(1, text=caption), message)
+
+    assert message.answer_photo.await_args.kwargs["caption"] is None
+    message.answer.assert_awaited_once()
+    assert message.answer.await_args.args[0] == caption
+
+
+async def test_downloads_collapsing_to_one_item_sent_as_photo(mock_http, message):
+    answer = make_answer(3)
+    mock_http.get(answer.links[0].url, status=404, body=b"gone")
+    mock_http.get(answer.links[1].url, body=b"IMG", content_type="image/jpeg")
+    mock_http.get(answer.links[2].url, status=404, body=b"gone")
+
+    await answer_with_album(answer, message)
+
+    message.reply_media_group.assert_not_awaited()
+    message.answer_photo.assert_awaited_once()
+
+
 async def test_all_downloads_failed_raises_upload_error(mock_http, message):
     mock_http.get(CDN, status=404, body=b"gone", repeat=True)
 

@@ -129,6 +129,28 @@ async def answer_with_url(url: str, message: Message) -> None:
     await message.answer(**content.as_kwargs(), reply_to_message_id=message.message_id)
 
 
+async def answer_with_photo(url: str, message: Message, filename: str | None = None) -> bool:
+    # Download ourselves (byte-for-byte, see upload_video) instead of handing
+    # the signed URL to Telegram's fetcher.
+    async with ClientSession() as session:
+        async with session.get(URL(url, encoded=True)) as result:
+            if result.headers.get('Content-Type', '').startswith('text/plain'):
+                logger.info('Got invalid content type')
+                return False
+            content = await get_content(result)
+
+    if not content:
+        return False
+
+    tg_file = BufferedInputFile(content, filename or 'photo.jpg')
+    try:
+        await message.answer_photo(tg_file, reply_to_message_id=message.message_id)
+        return True
+    except TelegramNetworkError as e:
+        logger.error(f"Telegram Network Error: {e}")
+        return False
+
+
 async def _remote_size(url: str) -> int | None:
     """Return Content-Length for a URL via a HEAD request, or None if unknown."""
     try:
@@ -250,18 +272,31 @@ async def answer_with_album(answer: Answer, message: Message) -> None:
 
     text = (answer.text or "").strip()
     leftover_text: str | None = None
+    caption: str | None = None
     if text:
         if len(text) <= TG_CAPTION_LIMIT:
-            media_items[0].caption = text
+            caption = text
         else:
             # Caption too long; send the full text as a follow-up reply.
             leftover_text = text
 
-    # Telegram limits media groups to 10 items, split into chunks
-    chunk_size = 10
-    for i in range(0, len(media_items), chunk_size):
-        chunk = media_items[i:i + chunk_size]
-        await message.reply_media_group(chunk, reply_to_message_id=message.message_id)
+    if len(media_items) == 1:
+        # Telegram rejects one-item media groups (2-10 required); send directly.
+        item = media_items[0]
+        if isinstance(item, InputMediaVideo):
+            await message.answer_video(
+                item.media, caption=caption, reply_to_message_id=message.message_id, supports_streaming=True
+            )
+        else:
+            await message.answer_photo(item.media, caption=caption, reply_to_message_id=message.message_id)
+    else:
+        if caption:
+            media_items[0].caption = caption
+        # Telegram limits media groups to 10 items, split into chunks
+        chunk_size = 10
+        for i in range(0, len(media_items), chunk_size):
+            chunk = media_items[i:i + chunk_size]
+            await message.reply_media_group(chunk, reply_to_message_id=message.message_id)
 
     if leftover_text:
         for chunk in _split_text(leftover_text, TG_TEXT_LIMIT):

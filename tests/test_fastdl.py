@@ -49,7 +49,7 @@ async def test_fixture_decodes_to_single_image(mock_http):
 
     answer = await FastDLSessionStrategy().run(POST_URL)
 
-    assert answer.result_type == ResultType.url
+    assert answer.result_type == ResultType.image_url
     assert len(answer.links) == 1
     assert answer.links[0].filetype == FileType.img
     assert answer.links[0].url.startswith("https://dl.snapcdn.app/get?token=")

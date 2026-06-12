@@ -3,6 +3,7 @@ from enum import Enum
 
 class ResultType(Enum):
     url = "url"
+    image_url = "image_url"
     video_url = "video_url"
     items_list = "items_list"
     text = "text"

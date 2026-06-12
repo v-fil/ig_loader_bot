@@ -5,7 +5,9 @@ from typing import Optional
 
 from aiogram import types
 
-from strategies.utils import answer_with_url, upload_video, Answer, answer_with_album, answer_with_text, UploadError
+from strategies.utils import (
+    answer_with_url, answer_with_photo, upload_video, Answer, answer_with_album, answer_with_text, UploadError
+)
 
 from .types import FilterUrlRegex, ResultType, Provider
 
@@ -78,6 +80,14 @@ class Registry:
                         logger.error(f'[{_id}] {str(e)}')
                         await answer_with_url(result.links[0].url, message)
                         return
+
+                elif result.result_type == ResultType.image_url:
+                    logger.info(f"[{_id}] trying to upload photo")
+                    link = result.links[0]
+                    if await answer_with_photo(link.url, message, link.filename):
+                        logger.info(f"[{_id}] successfully uploaded photo, exiting")
+                        return
+                    continue
 
                 elif result.result_type == ResultType.url:
                     logger.info(f"[{_id}] trying to upload result")

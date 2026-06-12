@@ -99,12 +99,12 @@ async def test_sidecar_mixed_items(install_post):
     ]
 
 
-async def test_single_image_answers_with_url(install_post):
+async def test_single_image_answers_with_image_url(install_post):
     install_post(StubPost(typename="GraphImage", url="https://cdn.example/photo.jpg"))
 
     answer = await InstaloaderStrategy().run(POST_URL)
 
-    assert answer.result_type == ResultType.url
+    assert answer.result_type == ResultType.image_url
     assert answer.links[0].url == "https://cdn.example/photo.jpg"
     assert answer.links[0].filetype == FileType.img
 

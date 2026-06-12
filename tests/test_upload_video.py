@@ -1,4 +1,4 @@
-"""Phase 4: _remote_size + upload_video, and the f0d4e8a encoded-URL regression.
+"""Phase 4: _remote_size + upload_video + answer_with_photo, and the f0d4e8a encoded-URL regression.
 
 The regression tests run against a real localhost aiohttp server instead of
 aioresponses: aioresponses normalizes URLs before matching and recording, which
@@ -18,9 +18,10 @@ from yarl import URL
 
 import strategies.utils as utils
 from strategies.types import FileType
-from strategies.utils import TG_SIZE_LIMIT, _remote_size, download_file, upload_video
+from strategies.utils import TG_SIZE_LIMIT, _remote_size, answer_with_photo, download_file, upload_video
 
 VIDEO_URL = "https://cdn.example/v/video.mp4"
+PHOTO_URL = "https://cdn.example/v/photo.jpg"
 
 
 @pytest.fixture
@@ -156,6 +157,53 @@ async def test_failed_transcode_returns_false(mock_http, message, monkeypatch):
     message.answer_video.assert_not_awaited()
 
 
+# --- answer_with_photo ---
+
+
+async def test_photo_downloads_and_sends(mock_http, message):
+    mock_http.get(PHOTO_URL, body=b"IMGDATA", content_type="image/jpeg")
+
+    assert await answer_with_photo(PHOTO_URL, message, "post.jpg") is True
+
+    message.answer_photo.assert_awaited_once()
+    file = message.answer_photo.await_args.args[0]
+    assert isinstance(file, BufferedInputFile)
+    assert file.data == b"IMGDATA"
+    assert file.filename == "post.jpg"
+
+
+async def test_photo_without_filename_uses_default(mock_http, message):
+    mock_http.get(PHOTO_URL, body=b"IMGDATA", content_type="image/jpeg")
+
+    assert await answer_with_photo(PHOTO_URL, message) is True
+
+    assert message.answer_photo.await_args.args[0].filename == "photo.jpg"
+
+
+@pytest.mark.parametrize("content_type", ["text/plain", "text/plain; charset=utf-8"])
+async def test_photo_text_plain_download_returns_false(mock_http, message, content_type):
+    mock_http.get(PHOTO_URL, body=b"URL signature mismatch", content_type=content_type)
+
+    assert await answer_with_photo(PHOTO_URL, message) is False
+
+    message.answer_photo.assert_not_awaited()
+
+
+async def test_photo_download_failure_returns_false(mock_http, message):
+    mock_http.get(PHOTO_URL, status=404, body=b"not found", content_type="image/jpeg")
+
+    assert await answer_with_photo(PHOTO_URL, message) is False
+
+    message.answer_photo.assert_not_awaited()
+
+
+async def test_photo_network_error_returns_false(mock_http, message):
+    mock_http.get(PHOTO_URL, body=b"IMGDATA", content_type="image/jpeg")
+    message.answer_photo.side_effect = TelegramNetworkError(method=None, message="boom")
+
+    assert await answer_with_photo(PHOTO_URL, message) is False
+
+
 # --- f0d4e8a regression: signed CDN URLs must hit the wire byte-for-byte ---
 
 # %2F, %21 and %2C in query values are exactly the escapes yarl's default
@@ -218,4 +266,12 @@ async def test_download_file_requests_url_byte_for_byte(raw_server):
         media = await download_file(signed_url(server), FileType.img, "0.jpg", session)
 
     assert isinstance(media, InputMediaPhoto)
+    assert seen == [("GET", SIGNED_PATH)]
+
+
+async def test_answer_with_photo_downloads_url_byte_for_byte(raw_server, message):
+    server, seen = raw_server
+
+    assert await answer_with_photo(signed_url(server), message) is True
+
     assert seen == [("GET", SIGNED_PATH)]

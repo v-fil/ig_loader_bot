@@ -68,7 +68,7 @@ async def test_ig_photo_fastdl():
         answer = await ig.FastDLSessionStrategy().run(IG_PHOTO)
 
     assert answer is not None
-    assert answer.result_type == ResultType.url
+    assert answer.result_type == ResultType.image_url
     assert len(answer.links) == 1
     assert answer.links[0].filetype == FileType.img
     await assert_links_fetchable(answer)
@@ -107,7 +107,7 @@ async def test_ig_photo_instaloader():
         answer = await ig.InstaloaderStrategy().run(IG_PHOTO)
 
     assert answer is not None
-    assert answer.result_type == ResultType.url
+    assert answer.result_type == ResultType.image_url
     assert len(answer.links) == 1
     await assert_links_fetchable(answer)
 

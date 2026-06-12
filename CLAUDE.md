@@ -25,8 +25,9 @@ restarts it after deploys — do not restart it yourself unless asked.
   `extract_id`, optional `preprocess_url` (awaited before strategies run).
 - `strategies/base.py` — `Registry.run` tries strategies in order until one
   returns an `Answer`; `ResultType` decides delivery (`video_url` →
-  `upload_video`, `items_list` → `answer_with_album`, `url`/`text` → direct).
-  A falsy strategy result moves to the next strategy.
+  `upload_video`, `image_url` → `answer_with_photo`, `items_list` →
+  `answer_with_album`, `url`/`text` → direct). A falsy strategy result moves
+  to the next strategy.
 - `strategies/utils.py` — upload pipeline: HEAD size check → Telegram URL
   upload → download fallback → ffmpeg transcode when over the 50 MB bot limit.
 - `strategies/yt.py` is disabled in the registry (empty strategy list).

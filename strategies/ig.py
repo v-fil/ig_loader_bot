@@ -83,11 +83,11 @@ class InstaloaderStrategy(AbstractStrategy):
                     result.links.append(link)
                 return result
             elif post.typename == 'GraphImage':
-                # Single photo: answer with the image URL directly (a one-item media
-                # group is not allowed by Telegram, so ResultType.url like fastdl).
+                # Single photo: sent via sendPhoto (a one-item media group is
+                # not allowed by Telegram).
                 return Answer(
                     links=[Link(post.url, file_type=FileType.img, filename=post.shortcode + '.jpg')],
-                    result_type=ResultType.url,
+                    result_type=ResultType.image_url,
                 )
             else:
                 logger.info(f"instaloader: unhandled post type '{post.typename}' for {post.shortcode}")
@@ -186,7 +186,7 @@ class FastDLSessionStrategy(AbstractStrategy):
                 return None
 
             if len(links) == 1:
-                rt = ResultType.video_url if links[0].filetype == FileType.video else ResultType.url
+                rt = ResultType.video_url if links[0].filetype == FileType.video else ResultType.image_url
                 return Answer(links, result_type=rt)
             return Answer(links, result_type=ResultType.items_list)
 
@@ -225,7 +225,7 @@ class FastDLPlaywrightStrategy(AbstractStrategy):
                     title = (await result_button.get_attribute("title")) or ""
                     if "video" in title.lower():
                         return Answer([Link(_url, file_type=FileType.video)])
-                    return Answer([Link(_url)], result_type=ResultType.url)
+                    return Answer([Link(_url, file_type=FileType.img)], result_type=ResultType.image_url)
                 except PWTimeoutError:
                     await page.screenshot(path=path.join(tempfile.gettempdir(), "result_not_found.png"))
                     logger.info(

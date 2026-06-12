@@ -34,6 +34,12 @@ def url_answer(url: str = "https://cdn.example/photo.jpg") -> Answer:
     return Answer(links=[Link(url=url, file_type=FileType.img)], result_type=ResultType.url)
 
 
+def image_answer(url: str = "https://cdn.example/photo.jpg") -> Answer:
+    return Answer(
+        links=[Link(url=url, file_type=FileType.img, filename="photo.jpg")], result_type=ResultType.image_url
+    )
+
+
 def album_answer(url: str = "https://cdn.example/item1.jpg") -> Answer:
     return Answer(links=[Link(url=url, file_type=FileType.img)], result_type=ResultType.items_list)
 
@@ -62,10 +68,11 @@ def helpers(monkeypatch):
     mocks = SimpleNamespace(
         upload_video=AsyncMock(return_value=True),
         answer_with_url=AsyncMock(),
+        answer_with_photo=AsyncMock(return_value=True),
         answer_with_album=AsyncMock(),
         answer_with_text=AsyncMock(),
     )
-    for name in ("upload_video", "answer_with_url", "answer_with_album", "answer_with_text"):
+    for name in ("upload_video", "answer_with_url", "answer_with_photo", "answer_with_album", "answer_with_text"):
         monkeypatch.setattr(base, name, getattr(mocks, name))
     return mocks
 
@@ -141,6 +148,39 @@ async def test_album_upload_error_tries_next_strategy(helpers, message):
 
     assert second.calls == [URL]
     helpers.answer_with_url.assert_awaited_once_with("https://cdn.example/2.jpg", message)
+
+
+async def test_photo_upload_success_stops(helpers, message):
+    first = StubStrategy(image_answer("https://cdn.example/p.jpg"))
+    second = StubStrategy(url_answer())
+    registry = make_registry(first, second)
+
+    await registry.run(PROVIDER, message, URL)
+
+    helpers.answer_with_photo.assert_awaited_once_with("https://cdn.example/p.jpg", message, "photo.jpg")
+    assert second.calls == []
+    helpers.answer_with_url.assert_not_awaited()
+
+
+async def test_photo_upload_false_tries_next_strategy(helpers, message):
+    helpers.answer_with_photo.return_value = False
+    first = StubStrategy(image_answer())
+    second = StubStrategy(url_answer("https://cdn.example/2.jpg"))
+    registry = make_registry(first, second)
+
+    await registry.run(PROVIDER, message, URL)
+
+    assert second.calls == [URL]
+    helpers.answer_with_url.assert_awaited_once_with("https://cdn.example/2.jpg", message)
+
+
+async def test_trailing_fallback_after_photo_upload_false(helpers, message):
+    helpers.answer_with_photo.return_value = False
+    registry = make_registry(StubStrategy(image_answer("https://cdn.example/p.jpg")))
+
+    await registry.run(PROVIDER, message, URL)
+
+    helpers.answer_with_url.assert_awaited_once_with("https://cdn.example/p.jpg", message)
 
 
 async def test_url_result_answers_with_url(helpers, message):
