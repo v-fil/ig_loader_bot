@@ -242,7 +242,7 @@ class FastDLPlaywrightStrategy(AbstractStrategy):
 
 
 def extract_id(text: str) -> str:
-    match = re.search(r"https://[w.]*instagram\.com/(reel|share|p)/([^/]*)/*", text)
+    match = re.search(r"https://[w.]*instagram\.com/(reels?|share|p)/([^/]*)/*", text)
     if not match:
         raise ValueError(f"Could not extract Instagram ID from: {text}")
     return f"IG:{match.group(2)}"

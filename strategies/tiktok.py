@@ -60,7 +60,14 @@ async def preprocess_url(url: str) -> str:
         async with ClientSession() as session:
             async with session.get(url, allow_redirects=False) as result:
                 location = result.headers.get('Location')
-            if location:
-                return location
+        if not location:
             logger.warning(f"No redirect Location header for TikTok URL: {url}")
+        elif "tiktok.com/@/" in location:
+            # The shortener redirects server-side clients to a degraded
+            # fallback with an empty username (tiktok.com/@/video/<id>) which
+            # snaptik rejects with a 404 page, while the short URL itself is
+            # accepted there - so keep the short form.
+            logger.info(f"Degraded redirect for TikTok URL {url}, keeping the short form")
+        else:
+            return location
     return url
